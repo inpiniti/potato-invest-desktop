@@ -4,10 +4,14 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useSettingStore } from "@/stores/useSettingStore"
+import { useAccountStore } from "@/stores/useAccountStore"
+import { useBalanceStore } from "@/stores/useBalanceStore"
 
 export default function App() {
   const { login, logout } = useAuthStore()
   const { darkMode } = useSettingStore()
+  const { accessToken, selectedAccount } = useAccountStore()
+  const { setHoldings, setBalance } = useBalanceStore()
 
   // 다크모드 초기화
   useEffect(() => {
@@ -53,6 +57,31 @@ export default function App() {
 
     return () => subscription.unsubscribe()
   }, [login, logout])
+
+  // 앱 시작 시 토큰이 있으면 자동 잔고 조회
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (accessToken && selectedAccount && window.ipcRenderer?.koreaInvestBalance) {
+        try {
+          console.log('앱 시작 시 잔고 자동 조회...')
+          const balanceResult = await window.ipcRenderer.koreaInvestBalance({
+            accessToken,
+            appkey: selectedAccount.appkey,
+            appsecret: selectedAccount.appsecret,
+            cano: selectedAccount.cano,
+          })
+          
+          console.log('잔고 조회 성공:', balanceResult)
+          setHoldings(balanceResult.holdings)
+          setBalance(balanceResult.balance)
+        } catch (error) {
+          console.error('자동 잔고 조회 실패:', error)
+        }
+      }
+    }
+
+    fetchBalance()
+  }, []) // 앱 시작 시 한 번만 실행
 
   useEffect(() => {
     // 딥링크 리스너 (로그인 콜백 처리)

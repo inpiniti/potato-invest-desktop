@@ -15,6 +15,16 @@ declare global {
         expiresIn: number
         tokenExpired: string
       }>
+      koreaInvestBalance: (params: {
+        accessToken: string
+        appkey: string
+        appsecret: string
+        cano: string
+        acntPrdtCd?: string
+      }) => Promise<{
+        holdings: any[]
+        balance: any
+      }>
     }
   }
 }

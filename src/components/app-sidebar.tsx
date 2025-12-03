@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ArchiveX, Command, File, Inbox, Send, Trash2 } from "lucide-react"
+import { Command, Wallet, Flag } from "lucide-react"
 
 import { NavUser } from "@/components/nav-user"
 import { Label } from "@/components/ui/label"
@@ -19,6 +19,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
+import { useBalanceStore } from "@/stores/useBalanceStore"
 
 // This is sample data
 const data = {
@@ -29,33 +30,15 @@ const data = {
   },
   navMain: [
     {
-      title: "Inbox",
+      title: "보유종목",
       url: "#",
-      icon: Inbox,
+      icon: Wallet,
       isActive: true,
     },
     {
-      title: "Drafts",
+      title: "S&P 500",
       url: "#",
-      icon: File,
-      isActive: false,
-    },
-    {
-      title: "Sent",
-      url: "#",
-      icon: Send,
-      isActive: false,
-    },
-    {
-      title: "Junk",
-      url: "#",
-      icon: ArchiveX,
-      isActive: false,
-    },
-    {
-      title: "Trash",
-      url: "#",
-      icon: Trash2,
+      icon: Flag,
       isActive: false,
     },
   ],
@@ -149,6 +132,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [activeItem, setActiveItem] = React.useState(data.navMain[0])
   const [mails, setMails] = React.useState(data.mails)
   const { setOpen } = useSidebar()
+  const { holdings } = useBalanceStore()
+
+  // 금액 포맷팅 함수
+  const formatCurrency = (value: string) => {
+    const num = parseFloat(value)
+    if (isNaN(num)) return '0'
+    return num.toLocaleString('ko-KR', { maximumFractionDigits: 2 })
+  }
 
   return (
     <Sidebar
@@ -237,22 +228,54 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarContent>
           <SidebarGroup className="px-0">
             <SidebarGroupContent>
-              {mails.map((mail) => (
-                <a
-                  href="#"
-                  key={mail.email}
-                  className="flex flex-col items-start gap-2 whitespace-nowrap border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                >
-                  <div className="flex w-full items-center gap-2">
-                    <span>{mail.name}</span>{" "}
-                    <span className="ml-auto text-xs">{mail.date}</span>
+              {activeItem?.title === "보유종목" ? (
+                // 보유종목 표시
+                holdings.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      보유종목이 없습니다
+                    </p>
                   </div>
-                  <span className="font-medium">{mail.subject}</span>
-                  <span className="line-clamp-2 w-[260px] whitespace-break-spaces text-xs">
-                    {mail.teaser}
-                  </span>
-                </a>
-              ))}
+                ) : (
+                  holdings.map((holding) => (
+                    <a
+                      href="#"
+                      key={holding.pdno}
+                      className="flex flex-col items-start gap-2 whitespace-nowrap border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex w-full items-center gap-2">
+                        <span className="font-medium">{holding.prdt_name}</span>
+                        <span className={`ml-auto font-semibold ${parseFloat(holding.evlu_pfls_rt1) >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                          {formatCurrency(holding.evlu_pfls_rt1)}%
+                        </span>
+                      </div>
+                      <div className="flex w-full gap-4 text-xs text-muted-foreground">
+                        <span>수량: {holding.cblc_qty13}</span>
+                        <span>평단: ${formatCurrency(holding.avg_unpr3)}</span>
+                        <span>평가: ${formatCurrency(holding.frcr_evlu_amt2)}</span>
+                      </div>
+                    </a>
+                  ))
+                )
+              ) : (
+                // S&P 500 또는 다른 메뉴 (기존 mails)
+                mails.map((mail) => (
+                  <a
+                    href="#"
+                    key={mail.email}
+                    className="flex flex-col items-start gap-2 whitespace-nowrap border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  >
+                    <div className="flex w-full items-center gap-2">
+                      <span>{mail.name}</span>{" "}
+                      <span className="ml-auto text-xs">{mail.date}</span>
+                    </div>
+                    <span className="font-medium">{mail.subject}</span>
+                    <span className="line-clamp-2 w-[260px] whitespace-break-spaces text-xs">
+                      {mail.teaser}
+                    </span>
+                  </a>
+                ))
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>

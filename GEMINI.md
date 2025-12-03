@@ -93,6 +93,37 @@
   - 주문 내역
   - 포지션 관리
 
+### 색상 규칙 (Color Guidelines)
+
+#### 수익/손실 표시 색상
+**중요**: 한국 주식 시장 관례를 따릅니다.
+
+- **상승 (플러스)**: `text-red-400` - 부드러운 빨간색
+  - Tailwind: `text-red-400` (#f87171)
+  - 사용 예: 수익률, 평가손익, 가격 상승
+  
+- **하락 (마이너스)**: `text-blue-400` - 부드러운 파란색
+  - Tailwind: `text-blue-400` (#60a5fa)
+  - 사용 예: 손실률, 평가손실, 가격 하락
+
+**절대 사용하지 말 것**:
+- ❌ `text-green-500` (초록색) - 한국 시장에서는 상승을 빨간색으로 표시
+- ❌ 너무 밝거나 어두운 색상 (가독성 저하)
+
+**적용 예시**:
+```tsx
+// ✅ 올바른 사용
+<span className={`${parseFloat(value) >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
+  {value}%
+</span>
+
+// ❌ 잘못된 사용
+<span className={`${parseFloat(value) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+  {value}%
+</span>
+```
+
+
 ---
 
 ## 🏗 아키텍처 및 개발 패턴

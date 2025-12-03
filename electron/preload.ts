@@ -25,6 +25,13 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     oauthLogin: (loginUrl: string) => ipcRenderer.invoke('oauth-login', loginUrl),
     koreaInvestAuth: (credentials: { appkey: string; appsecret: string }) => 
         ipcRenderer.invoke('korea-invest-auth', credentials),
+    koreaInvestBalance: (params: { 
+        accessToken: string; 
+        appkey: string; 
+        appsecret: string; 
+        cano: string; 
+        acntPrdtCd?: string 
+    }) => ipcRenderer.invoke('korea-invest-balance', params),
 
     // You can expose other APTs you need here.
     // ...

@@ -199,5 +199,48 @@ if (!gotTheLock) {
         }
     })
 
+    // 한국투자증권 잔고 조회 핸들러
+    ipcMain.handle('korea-invest-balance', async (_, { accessToken, appkey, appsecret, cano, acntPrdtCd }) => {
+        try {
+            // 계좌번호 앞 8자리와 뒤 2자리 분리
+            const CANO = cano.substring(0, 8)
+            const ACNT_PRDT_CD = acntPrdtCd || cano.substring(9, 11) || '01'
+            
+            const url = new URL('https://openapi.koreainvestment.com:9443/uapi/overseas-stock/v1/trading/inquire-balance')
+            url.searchParams.append('CANO', CANO)
+            url.searchParams.append('ACNT_PRDT_CD', ACNT_PRDT_CD)
+            url.searchParams.append('WCRC_FRCR_DVSN_CD', '02')
+            url.searchParams.append('NATN_CD', '000')
+            url.searchParams.append('TR_MKET_CD', '00')
+            url.searchParams.append('INQR_DVSN_CD', '00')
+
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                    'authorization': `Bearer ${accessToken}`,
+                    'appkey': appkey,
+                    'appsecret': appsecret,
+                    'tr_id': 'CTRP6504R',
+                },
+            })
+
+            if (!response.ok) {
+                const errorText = await response.text()
+                throw new Error(`잔고 조회 실패: ${response.status} ${response.statusText} - ${errorText}`)
+            }
+
+            const data = await response.json()
+            
+            return {
+                holdings: data.output1 || [],
+                balance: data.output3 || null,
+            }
+        } catch (error: any) {
+            console.error('한투 잔고 조회 에러:', error)
+            throw error
+        }
+    })
+
     app.whenReady().then(createWindow)
 }
