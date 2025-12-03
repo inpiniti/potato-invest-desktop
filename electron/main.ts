@@ -15,6 +15,7 @@ const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 function createWindow() {
     win = new BrowserWindow({
         icon: path.join(process.env.VITE_PUBLIC || '', 'electron-vite.svg'),
+        autoHideMenuBar: true, // 메뉴바 숨김
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
         },
