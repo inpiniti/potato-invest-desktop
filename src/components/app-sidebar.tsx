@@ -21,6 +21,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
+import { AboutDialog } from "@/components/about-dialog"
 
 // This is sample data
 const data = {
@@ -136,12 +137,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { holdings } = useBalanceStore()
   const { sp500 } = useSP500Store()
 
-  // 금액 포맷팅 함수
   const formatCurrency = (value: string) => {
     const num = parseFloat(value)
     if (isNaN(num)) return '0'
     return num.toLocaleString('ko-KR', { maximumFractionDigits: 2 })
   }
+
+  // About 다이얼로그 상태
+  const [aboutOpen, setAboutOpen] = React.useState(false)
 
   return (
     <Sidebar
@@ -159,16 +162,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-                <a href="#">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                    <Command className="size-4" />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">Acme Inc</span>
-                    <span className="truncate text-xs">Enterprise</span>
-                  </div>
-                </a>
+              <SidebarMenuButton 
+                size="lg" 
+                className="md:h-8 md:p-0 cursor-pointer"
+                onClick={() => setAboutOpen(true)}
+              >
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <Command className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">Potato Invest</span>
+                  <span className="truncate text-xs">Desktop</span>
+                </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -307,6 +312,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroup>
         </SidebarContent>
       </Sidebar>
+
+      {/* About 다이얼로그 */}
+      <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
     </Sidebar>
   )
 }

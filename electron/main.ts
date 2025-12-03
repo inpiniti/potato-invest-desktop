@@ -16,6 +16,7 @@ function createWindow() {
     console.log('Preload path:', path.join(__dirname, 'preload.js'))
     
     win = new BrowserWindow({
+        title: 'Potato Invest Desktop',
         icon: path.join(process.env.VITE_PUBLIC || '', 'electron-vite.svg'),
         autoHideMenuBar: true, // 메뉴바 숨김
         webPreferences: {
