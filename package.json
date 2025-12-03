@@ -23,7 +23,9 @@
       "package.json"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "signAndEditExecutable": false
     },
     "nsis": {
@@ -33,7 +35,9 @@
     "protocols": [
       {
         "name": "Potato Invest",
-        "schemes": ["potato-invest"]
+        "schemes": [
+          "potato-invest"
+        ]
       }
     ]
   },

@@ -18,7 +18,8 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
     return ipcRenderer.invoke(channel, ...omit);
   },
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
-  oauthLogin: (loginUrl) => ipcRenderer.invoke("oauth-login", loginUrl)
+  oauthLogin: (loginUrl) => ipcRenderer.invoke("oauth-login", loginUrl),
+  koreaInvestAuth: (credentials) => ipcRenderer.invoke("korea-invest-auth", credentials)
   // You can expose other APTs you need here.
   // ...
 });

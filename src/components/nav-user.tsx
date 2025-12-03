@@ -31,11 +31,14 @@ import {
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useSettingStore } from "@/stores/useSettingStore"
+import { AccountSettingsDialog } from "@/components/account-settings-dialog"
+import { useState } from "react"
 
 export function NavUser() {
   const { isMobile } = useSidebar()
   const { isLoggedIn, email, thumbnailUrl, name } = useAuthStore()
   const { darkMode, toggleDarkMode } = useSettingStore()
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false)
   
   const handleLogin = async () => {
     console.log('로그인 버튼 클릭됨')
@@ -137,6 +140,7 @@ export function NavUser() {
 
   // 로그인한 경우
   return (
+    <>
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
@@ -180,9 +184,9 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAccountSettingsOpen(true)}>
                 <BadgeCheck />
-                계정 설정
+                계좌 설정
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <CreditCard />
@@ -202,5 +206,12 @@ export function NavUser() {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+    
+    {/* 계좌 설정 다이얼로그 */}
+    <AccountSettingsDialog 
+      open={accountSettingsOpen} 
+      onOpenChange={setAccountSettingsOpen} 
+    />
+    </>
   )
 }

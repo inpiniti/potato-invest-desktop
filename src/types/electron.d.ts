@@ -9,6 +9,12 @@ declare global {
       invoke: (channel: string, ...args: any[]) => Promise<any>
       openExternal: (url: string) => Promise<void>
       oauthLogin: (loginUrl: string) => Promise<{ accessToken: string; refreshToken: string }>
+      koreaInvestAuth: (credentials: { appkey: string; appsecret: string }) => Promise<{
+        accessToken: string
+        tokenType: string
+        expiresIn: number
+        tokenExpired: string
+      }>
     }
   }
 }

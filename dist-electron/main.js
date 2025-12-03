@@ -128,5 +128,33 @@ if (!gotTheLock) {
       });
     });
   });
+  ipcMain.handle("korea-invest-auth", async (_, { appkey, appsecret }) => {
+    try {
+      const response = await fetch("https://openapi.koreainvestment.com:9443/oauth2/tokenP", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=UTF-8"
+        },
+        body: JSON.stringify({
+          grant_type: "client_credentials",
+          appkey,
+          appsecret
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`인증 실패: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      return {
+        accessToken: data.access_token,
+        tokenType: data.token_type,
+        expiresIn: data.expires_in,
+        tokenExpired: data.access_token_token_expired
+      };
+    } catch (error) {
+      console.error("한투 API 인증 에러:", error);
+      throw error;
+    }
+  });
   app.whenReady().then(createWindow);
 }
