@@ -3,9 +3,20 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/stores/useAuthStore"
+import { useSettingStore } from "@/stores/useSettingStore"
 
 export default function App() {
   const { login, logout } = useAuthStore()
+  const { darkMode } = useSettingStore()
+
+  // 다크모드 초기화
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [darkMode])
 
   useEffect(() => {
     // 초기 세션 확인

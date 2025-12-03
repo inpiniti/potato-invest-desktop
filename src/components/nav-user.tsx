@@ -1,11 +1,11 @@
 import {
   BadgeCheck,
-  Bell,
   ChevronsUpDown,
   CreditCard,
   LogOut,
-  Sparkles,
   User,
+  Moon,
+  Sun,
 } from "lucide-react"
 
 import {
@@ -30,14 +30,12 @@ import {
 } from "@/components/ui/sidebar"
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/stores/useAuthStore"
+import { useSettingStore } from "@/stores/useSettingStore"
 
 export function NavUser() {
   const { isMobile } = useSidebar()
   const { isLoggedIn, email, thumbnailUrl, name } = useAuthStore()
-  
-  console.log('NavUser Render:', { isLoggedIn: isLoggedIn(), email })
-  console.log('window.ipcRenderer:', window.ipcRenderer)
-  console.log('window keys:', Object.keys(window).filter(k => k.includes('ipc')))
+  const { darkMode, toggleDarkMode } = useSettingStore()
   
   const handleLogin = async () => {
     console.log('로그인 버튼 클릭됨')
@@ -149,23 +147,16 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Sparkles />
-                프로 업그레이드
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
                 <BadgeCheck />
                 계정 설정
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem disabled>
                 <CreditCard />
                 결제 정보
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                알림 설정
+              <DropdownMenuItem onClick={toggleDarkMode}>
+                {darkMode ? <Sun /> : <Moon />}
+                {darkMode ? '라이트 모드' : '다크 모드'}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
