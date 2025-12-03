@@ -1,5 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+console.log('✅ Preload script loaded!')
+
+
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
     on(...args: Parameters<typeof ipcRenderer.on>) {
@@ -18,7 +21,12 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
         const [channel, ...omit] = args
         return ipcRenderer.invoke(channel, ...omit)
     },
+    openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
 
     // You can expose other APTs you need here.
     // ...
 })
+
+// Preload 스크립트가 로드되었는지 확인하기 위한 플래그
+console.log('✅ Preload script loaded!')
+console.log('ipcRenderer exposed:', typeof window !== 'undefined')

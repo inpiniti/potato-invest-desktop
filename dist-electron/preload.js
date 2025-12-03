@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+console.log("✅ Preload script loaded!");
 contextBridge.exposeInMainWorld("ipcRenderer", {
   on(...args) {
     const [channel, listener] = args;
@@ -15,7 +16,10 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   invoke(...args) {
     const [channel, ...omit] = args;
     return ipcRenderer.invoke(channel, ...omit);
-  }
+  },
+  openExternal: (url) => ipcRenderer.invoke("open-external", url)
   // You can expose other APTs you need here.
   // ...
 });
+console.log("✅ Preload script loaded!");
+console.log("ipcRenderer exposed:", typeof window !== "undefined");
