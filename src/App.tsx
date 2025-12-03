@@ -86,10 +86,15 @@ export default function App() {
     }
 
     // @ts-ignore
-    const removeListener = window.ipcRenderer?.on('deep-link', handleDeepLink)
+    if (window.ipcRenderer) {
+      window.ipcRenderer.on('deep-link', handleDeepLink)
+    }
     
     return () => {
-      if (removeListener) removeListener()
+      // @ts-ignore
+      if (window.ipcRenderer) {
+        window.ipcRenderer.off('deep-link', handleDeepLink)
+      }
     }
   }, [])
 

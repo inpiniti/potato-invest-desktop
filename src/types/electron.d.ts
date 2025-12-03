@@ -8,6 +8,7 @@ declare global {
       send: (channel: string, ...args: any[]) => void
       invoke: (channel: string, ...args: any[]) => Promise<any>
       openExternal: (url: string) => Promise<void>
+      oauthLogin: (loginUrl: string) => Promise<{ accessToken: string; refreshToken: string }>
     }
   }
 }

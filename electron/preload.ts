@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
         return ipcRenderer.invoke(channel, ...omit)
     },
     openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+    oauthLogin: (loginUrl: string) => ipcRenderer.invoke('oauth-login', loginUrl),
 
     // You can expose other APTs you need here.
     // ...

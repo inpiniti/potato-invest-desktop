@@ -50,20 +50,54 @@ export function NavUser() {
       
       console.log('Redirect URL:', redirectTo)
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'kakao',
         options: {
           redirectTo,
+          skipBrowserRedirect: true, // 자동 리다이렉트 비활성화
         }
       })
+      
       if (error) {
         console.error('Supabase 로그인 에러:', error)
         throw error
       }
-      console.log('Supabase 로그인 요청 성공')
+      
+      if (data?.url) {
+        console.log('OAuth URL:', data.url)
+        
+        // Electron의 BrowserWindow를 사용하여 로그인
+        if (window.ipcRenderer?.oauthLogin) {
+          const tokens = await window.ipcRenderer.oauthLogin(data.url)
+          
+          // 사용자가 창을 닫은 경우 (null 반환)
+          if (!tokens) {
+            console.log('로그인 취소됨')
+            return
+          }
+          
+          console.log('토큰 받음:', tokens)
+          
+          // Supabase 세션 설정
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: tokens.accessToken,
+            refresh_token: tokens.refreshToken,
+          })
+          
+          if (sessionError) {
+            console.error('세션 설정 실패:', sessionError)
+            throw sessionError
+          }
+          
+          console.log('로그인 성공!')
+        } else {
+          console.error('ipcRenderer.oauthLogin을 사용할 수 없습니다')
+          alert('로그인 기능을 사용할 수 없습니다. 앱을 다시 시작해주세요.')
+        }
+      }
     } catch (error: any) {
       console.error('로그인 실패:', error)
-      alert(`로그인 중 오류가 발생했습니다: ${error.message || error}`)
+      // 에러는 이미 위에서 처리되었으므로 여기서는 아무것도 하지 않음
     }
   }
 
