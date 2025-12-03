@@ -238,8 +238,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {activeItem?.title === "보유종목" ? (
                 // 보유종목 표시
                 holdings.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex flex-col items-center justify-center p-6 text-center">
+                    <p className="text-xs text-muted-foreground">
                       보유종목이 없습니다
                     </p>
                   </div>
@@ -248,15 +248,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <a
                       href="#"
                       key={holding.pdno}
-                      className="flex flex-col items-start gap-2 whitespace-nowrap border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      className="flex flex-col items-start gap-1 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       <div className="flex w-full items-center gap-2">
-                        <span className="font-medium">{holding.prdt_name}</span>
-                        <span className={`ml-auto font-semibold ${parseFloat(holding.evlu_pfls_rt1) >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                        <span className="text-sm font-medium">{holding.prdt_name}</span>
+                        <span className={`ml-auto text-sm font-semibold ${parseFloat(holding.evlu_pfls_rt1) >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
                           {formatCurrency(holding.evlu_pfls_rt1)}%
                         </span>
                       </div>
-                      <div className="flex w-full gap-4 text-xs text-muted-foreground">
+                      <div className="flex w-full gap-3 text-xs text-muted-foreground">
                         <span>수량: {holding.cblc_qty13}</span>
                         <span>평단: ${formatCurrency(holding.avg_unpr3)}</span>
                         <span>평가: ${formatCurrency(holding.frcr_evlu_amt2)}</span>
@@ -267,8 +267,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               ) : activeItem?.title === "S&P 500" ? (
                 // S&P 500 종목 표시
                 sp500.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex flex-col items-center justify-center p-6 text-center">
+                    <p className="text-xs text-muted-foreground">
                       S&P 500 데이터를 불러오는 중...
                     </p>
                   </div>
@@ -277,10 +277,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <a
                       href="#"
                       key={stock.ticker}
-                      className="flex flex-col items-start gap-2 whitespace-nowrap border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      className="flex flex-col items-start gap-0.5 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       <div className="flex w-full items-center gap-2">
-                        <span className="font-medium">{stock.ticker}</span>
+                        <span className="text-sm font-medium">{stock.ticker}</span>
                         <span className="ml-auto text-xs text-muted-foreground">{stock.exchange}</span>
                       </div>
                       <span className="text-xs text-muted-foreground line-clamp-1">

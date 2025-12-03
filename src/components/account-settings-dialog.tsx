@@ -131,31 +131,31 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
         </DialogHeader>
 
         {view === 'list' ? (
-          <div className="flex gap-4 h-[500px]">
+          <div className="flex gap-3 h-[500px]">
             {/* 왼쪽: 계좌 리스트 */}
-            <div className="w-1/3 border-r pr-4 flex flex-col">
-              <div className="flex-1 overflow-y-auto space-y-2">
+            <div className="w-1/3 border-r pr-3 flex flex-col">
+              <div className="flex-1 overflow-y-auto space-y-1.5">
                 {accounts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="text-xs text-muted-foreground text-center py-6">
                     등록된 계좌가 없습니다.
                   </p>
                 ) : (
                   accounts.map((account) => (
                     <div
                       key={account.cano}
-                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-2 border rounded cursor-pointer transition-colors ${
                         selectedAccount?.cano === account.cano
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:bg-accent'
                       }`}
                       onClick={() => handleSelectAccount(account)}
                     >
-                      <div className="flex items-center gap-3 flex-1">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
                         {selectedAccount?.cano === account.cano && (
-                          <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                          <Check className="h-3 w-3 text-primary flex-shrink-0" />
                         )}
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{account.cano}</p>
+                          <p className="text-sm font-medium truncate">{account.cano}</p>
                           <p className="text-xs text-muted-foreground truncate">
                             {account.appkey.substring(0, 10)}...
                           </p>
@@ -164,12 +164,13 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="h-7 w-7 p-0"
                         onClick={(e) => {
                           e.stopPropagation()
                           removeAccount(account.cano)
                         }}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-3 w-3 text-destructive" />
                       </Button>
                     </div>
                   ))
@@ -177,9 +178,9 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
               </div>
 
               {/* 추가 버튼 */}
-              <Button onClick={() => setView('add')} className="w-full mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                계좌 추가
+              <Button onClick={() => setView('add')} size="sm" className="w-full mt-3 h-8">
+                <Plus className="h-3 w-3 mr-1.5" />
+                <span className="text-xs">계좌 추가</span>
               </Button>
             </div>
 
@@ -198,37 +199,37 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                   <p className="text-muted-foreground">잔고 데이터를 불러오는 중...</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div>
-                    <h3 className="font-semibold mb-3">잔고 정보</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 border rounded-lg">
+                    <h3 className="text-sm font-semibold mb-2">잔고 정보</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 border rounded">
                         <p className="text-xs text-muted-foreground">총자산</p>
-                        <p className="text-lg font-semibold">${formatCurrency(balance.tot_asst_amt)}</p>
+                        <p className="text-sm font-semibold">${formatCurrency(balance.tot_asst_amt)}</p>
                       </div>
-                      <div className="p-3 border rounded-lg">
+                      <div className="p-2 border rounded">
                         <p className="text-xs text-muted-foreground">평가금액</p>
-                        <p className="text-lg font-semibold">${formatCurrency(balance.evlu_amt_smtl)}</p>
+                        <p className="text-sm font-semibold">${formatCurrency(balance.evlu_amt_smtl)}</p>
                       </div>
-                      <div className="p-3 border rounded-lg">
+                      <div className="p-2 border rounded">
                         <p className="text-xs text-muted-foreground">평가손익</p>
-                        <p className={`text-lg font-semibold ${parseFloat(balance.evlu_pfls_amt_smtl) >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                        <p className={`text-sm font-semibold ${parseFloat(balance.evlu_pfls_amt_smtl) >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
                           ${formatCurrency(balance.evlu_pfls_amt_smtl)}
                         </p>
                       </div>
-                      <div className="p-3 border rounded-lg">
+                      <div className="p-2 border rounded">
                         <p className="text-xs text-muted-foreground">수익률</p>
-                        <p className={`text-lg font-semibold ${parseFloat(balance.evlu_erng_rt1) >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
+                        <p className={`text-sm font-semibold ${parseFloat(balance.evlu_erng_rt1) >= 0 ? 'text-red-400' : 'text-blue-400'}`}>
                           {formatCurrency(balance.evlu_erng_rt1)}%
                         </p>
                       </div>
-                      <div className="p-3 border rounded-lg">
+                      <div className="p-2 border rounded">
                         <p className="text-xs text-muted-foreground">예수금</p>
-                        <p className="text-lg font-semibold">${formatCurrency(balance.dncl_amt)}</p>
+                        <p className="text-sm font-semibold">${formatCurrency(balance.dncl_amt)}</p>
                       </div>
-                      <div className="p-3 border rounded-lg">
+                      <div className="p-2 border rounded">
                         <p className="text-xs text-muted-foreground">인출가능금액</p>
-                        <p className="text-lg font-semibold">${formatCurrency(balance.wdrw_psbl_tot_amt)}</p>
+                        <p className="text-sm font-semibold">${formatCurrency(balance.wdrw_psbl_tot_amt)}</p>
                       </div>
                     </div>
                   </div>

@@ -129,6 +129,43 @@
 </span>
 ```
 
+### UI 밀도 (UI Density)
+
+**중요**: 코드 에디터처럼 컴팩트한 UI를 지향합니다.
+
+#### 글꼴 크기
+- **기본 텍스트**: `text-xs` (12px) 또는 `text-sm` (14px)
+- **제목**: `text-sm` (14px) 또는 `text-base` (16px)
+- **큰 제목**: `text-lg` (18px) 최대
+- ❌ `text-xl` 이상은 특별한 경우가 아니면 사용하지 않음
+
+#### 패딩/간격
+- **리스트 아이템**: `p-2` (8px) 또는 `p-3` (12px)
+- **카드/컨테이너**: `p-3` (12px) 또는 `p-4` (16px)
+- **간격**: `gap-2` (8px) 또는 `gap-3` (12px)
+- ❌ `p-6` 이상의 큰 패딩은 다이얼로그 등 특별한 경우에만 사용
+
+#### 높이
+- **버튼**: `h-8` (32px) 또는 `h-9` (36px)
+- **입력 필드**: `h-8` (32px) 또는 `h-9` (36px)
+- **리스트 아이템**: 최소 높이 유지, 불필요한 여백 제거
+
+**적용 예시**:
+```tsx
+// ✅ 올바른 사용 - 컴팩트한 UI
+<div className="p-2 text-sm">
+  <h3 className="text-sm font-semibold mb-1">제목</h3>
+  <p className="text-xs text-muted-foreground">설명</p>
+</div>
+
+// ❌ 잘못된 사용 - 너무 큰 UI
+<div className="p-6 text-base">
+  <h3 className="text-xl font-semibold mb-4">제목</h3>
+  <p className="text-base text-muted-foreground">설명</p>
+</div>
+```
+
+
 
 ---
 
