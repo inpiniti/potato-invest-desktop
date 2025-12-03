@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
 import { useBalanceStore } from "@/stores/useBalanceStore"
+import { useSP500Store } from "@/stores/useSP500Store"
 
 // This is sample data
 const data = {
@@ -133,6 +134,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [mails, setMails] = React.useState(data.mails)
   const { setOpen } = useSidebar()
   const { holdings } = useBalanceStore()
+  const { sp500 } = useSP500Store()
 
   // 금액 포맷팅 함수
   const formatCurrency = (value: string) => {
@@ -254,6 +256,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <span>평단: ${formatCurrency(holding.avg_unpr3)}</span>
                         <span>평가: ${formatCurrency(holding.frcr_evlu_amt2)}</span>
                       </div>
+                    </a>
+                  ))
+                )
+              ) : activeItem?.title === "S&P 500" ? (
+                // S&P 500 종목 표시
+                sp500.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      S&P 500 데이터를 불러오는 중...
+                    </p>
+                  </div>
+                ) : (
+                  sp500.map((stock) => (
+                    <a
+                      href="#"
+                      key={stock.ticker}
+                      className="flex flex-col items-start gap-2 whitespace-nowrap border-b p-4 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    >
+                      <div className="flex w-full items-center gap-2">
+                        <span className="font-medium">{stock.ticker}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">{stock.exchange}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground line-clamp-1">
+                        {stock.name}
+                      </span>
                     </a>
                   ))
                 )

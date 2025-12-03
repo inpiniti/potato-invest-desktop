@@ -25,6 +25,11 @@ declare global {
         holdings: any[]
         balance: any
       }>
+      sp500Fetch: () => Promise<Array<{
+        ticker: string
+        name: string
+        exchange: string
+      }>>
     }
   }
 }

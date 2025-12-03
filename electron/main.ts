@@ -242,5 +242,66 @@ if (!gotTheLock) {
         }
     })
 
+    // S&P 500 종목 리스트 크롤링 핸들러
+    ipcMain.handle('sp500-fetch', async () => {
+        try {
+            const cheerio = await import('cheerio')
+            
+            // Wikipedia S&P 500 페이지에서 데이터 가져오기
+            const response = await fetch(
+                'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies',
+                {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    },
+                }
+            )
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch S&P 500 data: ${response.status}`)
+            }
+
+            const html = await response.text()
+            const $ = cheerio.load(html)
+            const stocks: Array<{ ticker: string; name: string; exchange: string }> = []
+
+            // 첫 번째 테이블 찾기
+            const table = $('#constituents').first()
+
+            // 테이블의 각 행 순회
+            table.find('tbody tr').each((_, row) => {
+                const cells = $(row).find('td')
+
+                if (cells.length >= 2) {
+                    const ticker = $(cells[0]).text().trim()
+                    const name = $(cells[1]).text().trim()
+
+                    // 거래소 정보 추정
+                    const nasdaqSymbols = [
+                        'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'NVDA', 'META', 'TSLA',
+                        'AVGO', 'COST', 'CSCO', 'ADBE', 'PEP', 'NFLX', 'CMCSA', 'INTC',
+                        'AMD', 'QCOM', 'INTU', 'AMGN', 'AMAT', 'ISRG', 'BKNG', 'ADP',
+                        'GILD', 'MDLZ', 'VRTX', 'REGN', 'LRCX', 'PANW', 'KLAC', 'SNPS',
+                        'CDNS', 'MRVL', 'ASML', 'ORLY', 'CTAS', 'ABNB', 'WDAY', 'MNST',
+                        'PCAR', 'PAYX', 'MCHP', 'FAST', 'ODFL', 'DXCM', 'ROST', 'VRSK',
+                        'IDXX', 'BIIB', 'CTSH', 'ANSS', 'DLTR', 'CPRT', 'CSGP', 'TEAM',
+                        'TTWO', 'ZS', 'DDOG', 'CRWD', 'FTNT', 'CHTR', 'NXPI', 'MRNA'
+                    ]
+                    const exchange = nasdaqSymbols.includes(ticker) ? 'NASDAQ' : 'NYSE'
+
+                    if (ticker && name) {
+                        stocks.push({ ticker, name, exchange })
+                    }
+                }
+            })
+
+            console.log(`S&P 500 크롤링 완료: ${stocks.length}개 종목`)
+            return stocks
+        } catch (error: any) {
+            console.error('S&P 500 크롤링 에러:', error)
+            throw error
+        }
+    })
+
     app.whenReady().then(createWindow)
 }

@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
         cano: string; 
         acntPrdtCd?: string 
     }) => ipcRenderer.invoke('korea-invest-balance', params),
+    sp500Fetch: () => ipcRenderer.invoke('sp500-fetch'),
 
     // You can expose other APTs you need here.
     // ...

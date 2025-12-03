@@ -6,12 +6,14 @@ import { useAuthStore } from "@/stores/useAuthStore"
 import { useSettingStore } from "@/stores/useSettingStore"
 import { useAccountStore } from "@/stores/useAccountStore"
 import { useBalanceStore } from "@/stores/useBalanceStore"
+import { useSP500Store } from "@/stores/useSP500Store"
 
 export default function App() {
   const { login, logout } = useAuthStore()
   const { darkMode } = useSettingStore()
   const { accessToken, selectedAccount } = useAccountStore()
   const { setHoldings, setBalance } = useBalanceStore()
+  const { setSP500 } = useSP500Store()
 
   // 다크모드 초기화
   useEffect(() => {
@@ -81,6 +83,25 @@ export default function App() {
     }
 
     fetchBalance()
+  }, []) // 앱 시작 시 한 번만 실행
+
+  // 앱 시작 시 S&P 500 크롤링
+  useEffect(() => {
+    const fetchSP500 = async () => {
+      if (window.ipcRenderer?.sp500Fetch) {
+        try {
+          console.log('S&P 500 크롤링 시작...')
+          const sp500Data = await window.ipcRenderer.sp500Fetch()
+          
+          console.log(`S&P 500 크롤링 완료: ${sp500Data.length}개 종목`)
+          setSP500(sp500Data)
+        } catch (error) {
+          console.error('S&P 500 크롤링 실패:', error)
+        }
+      }
+    }
+
+    fetchSP500()
   }, []) // 앱 시작 시 한 번만 실행
 
   useEffect(() => {
