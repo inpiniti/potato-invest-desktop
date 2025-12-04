@@ -576,11 +576,14 @@ if (!gotTheLock) {
 
             // Convert to Board format
             const tossComments = comments.map((comment: any) => ({
-                author: comment.user?.displayName || comment.user?.name || comment.memberInfo?.nickname || 'Anonymous',
+                author: comment.author?.nickname || 'Anonymous',
                 title: comment.title || '',
-                content: comment.body || comment.message || '',
-                createdAt: comment.createdAt || comment.createTime || new Date().toISOString(),
-                thumbnail: comment.user?.profileImageUrl,
+                content: comment.message || '',
+                createdAt: comment.updatedAt || new Date().toISOString(),
+                readCount: parseInt(comment.readCount) || 0,
+                likeCount: parseInt(comment.likeCount) || 0,
+                badge: comment.author?.badge?.badge || '',
+                profilePictureUrl: comment.author?.profilePictureUrl || '',
             }))
             
             console.log(`[Toss] Found ${tossComments.length} comments for ${ticker}`)

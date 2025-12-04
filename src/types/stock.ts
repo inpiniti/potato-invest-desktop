@@ -5,6 +5,10 @@ export interface Board {
   content: string     // 내용
   createdAt: string   // 등록일
   thumbnail?: string  // 썸네일 (선택)
+  readCount?: number  // 조회수
+  likeCount?: number  // 좋아요 수
+  badge?: string      // 뱃지
+  profilePictureUrl?: string  // 프로필 이미지
 }
 
 // 종목 정보 타입

@@ -70,13 +70,37 @@ export function RightPanel() {
               toss.map((comment, index) => (
                 <Card key={index} className="hover:bg-accent/50 transition-colors">
                   <CardHeader className="p-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-xs font-medium">
-                        {comment.author || '익명'}
-                      </CardTitle>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(comment.createdAt).toLocaleDateString('ko-KR')}
-                      </span>
+                    <div className="flex items-start gap-2">
+                      {/* 프로필 이미지 */}
+                      {comment.profilePictureUrl && (
+                        <img 
+                          src={comment.profilePictureUrl} 
+                          alt={comment.author}
+                          className="w-8 h-8 rounded-full flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-xs font-medium">
+                            {comment.author || '익명'}
+                          </CardTitle>
+                          {/* 뱃지 */}
+                          {comment.badge && (
+                            <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">
+                              {comment.badge}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <span>{new Date(comment.createdAt).toLocaleDateString('ko-KR')}</span>
+                          {comment.readCount !== undefined && (
+                            <span>조회 {comment.readCount.toLocaleString()}</span>
+                          )}
+                          {comment.likeCount !== undefined && (
+                            <span>좋아요 {comment.likeCount.toLocaleString()}</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-3 pt-0">

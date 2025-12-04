@@ -4,11 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp, X } from 'lucide-react'
 
 export function MainContent() {
   const { ticker, info } = useStockStore()
-  const { addTrading, removeTrading, isInTrading } = useTradingStore()
+  const { tradings, addTrading, removeTrading, isInTrading } = useTradingStore()
 
   if (!ticker) {
     return (
@@ -62,8 +62,8 @@ export function MainContent() {
         </Button>
       </div>
 
-      {/* 종목 정보 탭 */}
-      <div className="flex-1 overflow-hidden">
+      {/* 종목 정보 탭 - 높이 h-72 */}
+      <div className="h-72 overflow-hidden border-b">
         <Tabs defaultValue="overview" className="h-full flex flex-col">
           <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
             <TabsTrigger value="overview" className="rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
@@ -275,10 +275,44 @@ export function MainContent() {
         </Tabs>
       </div>
 
-      {/* 하단: 터미널 패널 (나중에 사용) */}
-      <div className="h-32 border-t bg-muted/30">
-        <div className="p-2 text-xs text-muted-foreground">
-          터미널 (개발 예정)
+      {/* 하단: 트레이딩 패널 */}
+      <div className="flex-1 overflow-hidden bg-muted/20">
+        <div className="h-full">
+          <h3 className="text-sm font-semibold p-2 border-b">트레이딩 종목</h3>
+          
+          {tradings.length === 0 ? (
+            <div className="flex items-center justify-center h-60 text-sm text-muted-foreground">
+              트레이딩 종목이 없습니다
+            </div>
+          ) : (
+            <ScrollArea className="h-[calc(100%-2rem)]">
+              <div className="grid grid-cols-1 gap-2 p-2">
+                {tradings.map((trading) => (
+                  <Card key={trading.ticker} className="h-40 w-full">
+                    <CardHeader className="p-3 flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm">{trading.ticker}</CardTitle>
+                        <p className="text-xs text-muted-foreground">{trading.name}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeTrading(trading.ticker)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0">
+                      <div className="text-xs text-muted-foreground">
+                        추가일: {new Date(trading.addedAt).toLocaleDateString('ko-KR')}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
         </div>
       </div>
     </div>
