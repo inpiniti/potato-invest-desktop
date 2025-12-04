@@ -44,6 +44,28 @@ declare global {
         name: string
         exchange: string
       }>>
+      
+      // Crawling API
+      tossCrawl: (ticker: string) => Promise<{
+        productCode: string
+        comments: Array<{
+          author: string
+          title: string
+          content: string
+          createdAt: string
+          thumbnail?: string
+        }>
+      }>
+      tradingViewCrawl: (ticker: string) => Promise<{
+        ticker: string
+        name: string
+        currentPrice?: number
+        changeRate?: number
+        marketCap?: string
+        description?: string
+      } | null>
+
+      newsCrawl: (ticker: string) => Promise<any[]>
     }
   }
 }

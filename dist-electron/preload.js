@@ -23,7 +23,11 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   koreaInvestBalance: (params) => ipcRenderer.invoke("korea-invest-balance", params),
   koreaInvestDaily: (params) => ipcRenderer.invoke("korea-invest-daily", params),
   koreaInvestMinutes: (params) => ipcRenderer.invoke("korea-invest-minutes", params),
-  sp500Fetch: () => ipcRenderer.invoke("sp500-fetch")
+  sp500Fetch: () => ipcRenderer.invoke("sp500-fetch"),
+  // Crawling API
+  tossCrawl: (ticker) => ipcRenderer.invoke("toss-crawl", { ticker }),
+  tradingViewCrawl: (ticker) => ipcRenderer.invoke("tradingview-crawl", { ticker }),
+  newsCrawl: (ticker) => ipcRenderer.invoke("news-crawl", { ticker })
   // You can expose other APTs you need here.
   // ...
 });

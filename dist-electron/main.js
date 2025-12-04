@@ -300,7 +300,7 @@ if (!gotTheLock) {
       let bymd = "";
       const targetCount = 300;
       const maxIterations = 3;
-      console.log(`${ticker} 일별 시세 조회 시작 (목표: ${targetCount}개)`);
+      console.log(`[Daily] ${ticker} - Start (target: ${targetCount})`);
       for (let i = 0; i < maxIterations; i++) {
         const url = new URL("https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice");
         url.searchParams.append("AUTH", "");
@@ -309,7 +309,7 @@ if (!gotTheLock) {
         url.searchParams.append("GUBN", "0");
         url.searchParams.append("BYMD", bymd);
         url.searchParams.append("MODP", "0");
-        console.log(`  ${i + 1}번째 조회 (BYMD: ${bymd || "오늘"})`);
+        console.log(`  ${i + 1}. Call (BYMD: ${bymd || "today"})`);
         const response = await fetch(url.toString(), {
           method: "GET",
           headers: {
@@ -344,17 +344,17 @@ if (!gotTheLock) {
           const date = new Date(year, month, day);
           date.setDate(date.getDate() - 1);
           bymd = date.getFullYear().toString() + (date.getMonth() + 1).toString().padStart(2, "0") + date.getDate().toString().padStart(2, "0");
-          console.log(`  다음 조회 기준일: ${bymd}`);
+          console.log(`  Next BYMD: ${bymd}`);
         } else {
-          console.log(`  마지막 날짜 정보 없음 (조회 종료)`);
+          console.log(`  No more data`);
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
-      console.log(`${ticker} 일별 시세 조회 완료: 총 ${allData.length}개`);
+      console.log(`[Daily] ${ticker} - Complete: ${allData.length} items`);
       return allData;
     } catch (error) {
-      console.error("한투 일별 시세 조회 에러:", error);
+      console.error("[Daily] Error:", error);
       throw error;
     }
   });
@@ -364,7 +364,7 @@ if (!gotTheLock) {
       let keyb = "";
       const targetCount = 240;
       const maxIterations = 2;
-      console.log(`${ticker} 분봉 조회 시작 (목표: ${targetCount}개)`);
+      console.log(`[Minutes] ${ticker} - Start (target: ${targetCount})`);
       for (let i = 0; i < maxIterations; i++) {
         const url = new URL("https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice");
         url.searchParams.append("AUTH", "");
@@ -376,7 +376,7 @@ if (!gotTheLock) {
         url.searchParams.append("NREC", "120");
         url.searchParams.append("FILL", "");
         url.searchParams.append("KEYB", keyb);
-        console.log(`  ${i + 1}번째 조회 (NEXT: ${i === 0 ? "최신" : "다음"}, KEYB: ${keyb || "최신"})`);
+        console.log(`  ${i + 1}. Call (NEXT: ${i === 0 ? "latest" : "next"}, KEYB: ${keyb || "latest"})`);
         const response = await fetch(url.toString(), {
           method: "GET",
           headers: {
@@ -415,18 +415,368 @@ if (!gotTheLock) {
           const date = new Date(year, month, day, hour, minute, second);
           date.setMinutes(date.getMinutes() - 1);
           keyb = date.getFullYear().toString() + (date.getMonth() + 1).toString().padStart(2, "0") + date.getDate().toString().padStart(2, "0") + date.getHours().toString().padStart(2, "0") + date.getMinutes().toString().padStart(2, "0") + date.getSeconds().toString().padStart(2, "0");
-          console.log(`  다음 조회 기준: ${keyb}`);
+          console.log(`  Next KEYB: ${keyb}`);
         } else {
-          console.log(`  마지막 시간 정보 없음 (조회 종료)`);
+          console.log(`  No time info (stop)`);
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
-      console.log(`${ticker} 분봉 조회 완료: 총 ${allData.length}개`);
+      console.log(`[Minutes] ${ticker} - Complete: ${allData.length} items`);
       return allData;
     } catch (error) {
-      console.error("한투 분봉 조회 에러:", error);
+      console.error("[Minutes] Error:", error);
       throw error;
+    }
+  });
+  ipcMain.handle("toss-crawl", async (_, { ticker }) => {
+    try {
+      const BASE_URL = "https://wts-cert-api.tossinvest.com/api";
+      console.log(`[Toss] Crawling ${ticker}...`);
+      const screenerResponse = await fetch(`${BASE_URL}/v3/search-all/wts-auto-complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: ticker,
+          sections: [
+            { type: "SCREENER" },
+            { type: "NEWS" },
+            { type: "PRODUCT", option: { addIntegratedSearchResult: true } },
+            { type: "TICS" }
+          ]
+        })
+      });
+      if (!screenerResponse.ok) {
+        throw new Error(`Screener API error: ${screenerResponse.status}`);
+      }
+      const screenerData = await screenerResponse.json();
+      let productCode;
+      if (Array.isArray(screenerData?.result)) {
+        for (const section of screenerData.result) {
+          if (section?.type === "PRODUCT" && section?.data?.items?.length) {
+            productCode = section.data.items[0]?.productCode;
+            if (productCode) break;
+          }
+        }
+      }
+      if (!productCode) {
+        console.log(`[Toss] Product code not found for ${ticker}`);
+        return { productCode: null, comments: [] };
+      }
+      console.log(`[Toss] Found productCode: ${productCode}`);
+      const communityResponse = await fetch(`${BASE_URL}/v3/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectId: productCode,
+          subjectType: "STOCK",
+          commentSortType: "RECENT"
+        })
+      });
+      if (!communityResponse.ok) {
+        throw new Error(`Community API error: ${communityResponse.status}`);
+      }
+      const communityData = await communityResponse.json();
+      let comments = [];
+      if (Array.isArray(communityData?.result?.comments?.body)) {
+        comments = communityData.result.comments.body;
+      } else if (Array.isArray(communityData?.result?.comments)) {
+        comments = communityData.result.comments;
+      } else if (Array.isArray(communityData?.comments?.body)) {
+        comments = communityData.comments.body;
+      } else if (Array.isArray(communityData?.comments)) {
+        comments = communityData.comments;
+      }
+      const tossComments = comments.map((comment) => ({
+        author: comment.user?.displayName || comment.user?.name || comment.memberInfo?.nickname || "Anonymous",
+        title: comment.title || "",
+        content: comment.body || comment.message || "",
+        createdAt: comment.createdAt || comment.createTime || (/* @__PURE__ */ new Date()).toISOString(),
+        thumbnail: comment.user?.profileImageUrl
+      }));
+      console.log(`[Toss] Found ${tossComments.length} comments for ${ticker}`);
+      return {
+        productCode,
+        comments: tossComments
+      };
+    } catch (error) {
+      console.error("[Toss] Crawling error:", error.message);
+      return { productCode: null, comments: [] };
+    }
+  });
+  ipcMain.handle("tradingview-crawl", async (_, { ticker }) => {
+    try {
+      console.log(`[TradingView] Crawling ${ticker}...`);
+      const url = "https://scanner.tradingview.com/america/scan";
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          columns: [
+            // 기본 정보
+            "name",
+            "description",
+            "logoid",
+            "type",
+            "close",
+            "change",
+            "volume",
+            "relative_volume_10d_calc",
+            "gap",
+            "volume_change",
+            "sector.tr",
+            "exchange",
+            "currency",
+            // 시가총액 및 평가
+            "market_cap_basic",
+            "Perf.1Y.MarketCap",
+            "price_earnings_ttm",
+            "price_earnings_growth_ttm",
+            "price_sales_current",
+            "price_book_fq",
+            "price_free_cash_flow_ttm",
+            "enterprise_value_to_revenue_ttm",
+            "enterprise_value_to_ebit_ttm",
+            "enterprise_value_ebitda_ttm",
+            // 배당
+            "dividends_yield_current",
+            "dividend_payout_ratio_ttm",
+            "continuous_dividend_payout",
+            "continuous_dividend_growth",
+            // 수익성
+            "gross_margin_ttm",
+            "operating_margin_ttm",
+            "pre_tax_margin_ttm",
+            "net_margin_ttm",
+            "free_cash_flow_margin_ttm",
+            "return_on_assets_fq",
+            "return_on_equity_fq",
+            "return_on_invested_capital_fq",
+            "sell_gen_admin_exp_other_ratio_ttm",
+            // 손익계산
+            "total_revenue_yoy_growth_ttm",
+            "earnings_per_share_diluted_ttm",
+            "earnings_per_share_diluted_yoy_growth_ttm",
+            // 대차대조표
+            "current_ratio_fq",
+            "quick_ratio_fq",
+            "debt_to_equity_fq",
+            "cash_n_short_term_invest_to_total_debt_fq",
+            // 현금흐름
+            "cash_f_operating_activities_ttm",
+            "cash_f_investing_activities_ttm",
+            "cash_f_financing_activities_ttm",
+            "free_cash_flow_ttm",
+            "capital_expenditures_ttm",
+            // 성과 지표
+            "Perf.W",
+            "Perf.1M",
+            "Perf.3M",
+            "Perf.6M",
+            "Perf.YTD",
+            "Perf.Y",
+            "Perf.5Y",
+            "Perf.10Y",
+            "Perf.All",
+            "Volatility.W",
+            "Volatility.M",
+            // 기술적 지표
+            "Recommend.All",
+            "Recommend.MA",
+            "Recommend.Other",
+            "RSI",
+            "Mom",
+            "AO",
+            "CCI20",
+            "Stoch.K",
+            "Stoch.D",
+            "BB.upper",
+            "BB.basis",
+            "BB.lower",
+            "SMA20",
+            "SMA50",
+            "SMA100",
+            "SMA200",
+            // 추가 지표
+            "recommendation_mark",
+            "price_target_1y_delta"
+          ],
+          filter: [
+            {
+              left: "name",
+              operation: "equal",
+              right: ticker
+            }
+          ],
+          range: [0, 10]
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`TradingView API error: ${response.status}`);
+      }
+      const data = await response.json();
+      if (!data.data || data.data.length === 0) {
+        throw new Error("No data found");
+      }
+      const item = data.data[0];
+      const d = item.d;
+      let idx = 0;
+      const basicInfo = {
+        name: d[idx++],
+        description: d[idx++],
+        logoid: d[idx++],
+        type: d[idx++],
+        close: d[idx++],
+        change: d[idx++],
+        volume: d[idx++],
+        relativeVolume10d: d[idx++],
+        gap: d[idx++],
+        volumeChange: d[idx++],
+        sector: d[idx++],
+        exchange: d[idx++],
+        currency: d[idx++]
+      };
+      const valuation = {
+        marketCap: d[idx++],
+        perf1YMarketCap: d[idx++],
+        priceEarningsTTM: d[idx++],
+        priceEarningsGrowthTTM: d[idx++],
+        priceSalesCurrent: d[idx++],
+        priceBookFQ: d[idx++],
+        priceFCFTTM: d[idx++],
+        evToRevenueTTM: d[idx++],
+        evToEbitTTM: d[idx++],
+        evToEbitdaTTM: d[idx++]
+      };
+      const dividend = {
+        yieldCurrent: d[idx++],
+        payoutRatioTTM: d[idx++],
+        continuousPayout: d[idx++],
+        continuousGrowth: d[idx++]
+      };
+      const profitability = {
+        grossMarginTTM: d[idx++],
+        operatingMarginTTM: d[idx++],
+        preTaxMarginTTM: d[idx++],
+        netMarginTTM: d[idx++],
+        fcfMarginTTM: d[idx++],
+        roaFQ: d[idx++],
+        roeFQ: d[idx++],
+        roicFQ: d[idx++],
+        sgaExpenseRatioTTM: d[idx++]
+      };
+      const incomeStatement = {
+        revenueGrowthTTM: d[idx++],
+        epsDilutedTTM: d[idx++],
+        epsGrowthTTM: d[idx++]
+      };
+      const balanceSheet = {
+        currentRatioFQ: d[idx++],
+        quickRatioFQ: d[idx++],
+        debtToEquityFQ: d[idx++],
+        cashToDebtFQ: d[idx++]
+      };
+      const cashFlow = {
+        operatingCFTTM: d[idx++],
+        investingCFTTM: d[idx++],
+        financingCFTTM: d[idx++],
+        freeCFTTM: d[idx++],
+        capexTTM: d[idx++]
+      };
+      const performance = {
+        perfWeek: d[idx++],
+        perf1Month: d[idx++],
+        perf3Month: d[idx++],
+        perf6Month: d[idx++],
+        perfYTD: d[idx++],
+        perfYear: d[idx++],
+        perf5Year: d[idx++],
+        perf10Year: d[idx++],
+        perfAll: d[idx++],
+        volatilityWeek: d[idx++],
+        volatilityMonth: d[idx++]
+      };
+      const technical = {
+        recommendAll: d[idx++],
+        recommendMA: d[idx++],
+        recommendOther: d[idx++],
+        rsi: d[idx++],
+        momentum: d[idx++],
+        ao: d[idx++],
+        cci20: d[idx++],
+        stochK: d[idx++],
+        stochD: d[idx++],
+        bbUpper: d[idx++],
+        bbBasis: d[idx++],
+        bbLower: d[idx++],
+        sma20: d[idx++],
+        sma50: d[idx++],
+        sma100: d[idx++],
+        sma200: d[idx++]
+      };
+      const additional = {
+        recommendationMark: d[idx++],
+        priceTarget1YDelta: d[idx++]
+      };
+      const stockInfo = {
+        ticker,
+        name: basicInfo.description || basicInfo.name || ticker,
+        currentPrice: basicInfo.close,
+        changeRate: basicInfo.change,
+        marketCap: valuation.marketCap ? `$${(valuation.marketCap / 1e9).toFixed(2)}B` : void 0,
+        description: `Sector: ${basicInfo.sector || "N/A"} | P/E: ${valuation.priceEarningsTTM || "N/A"} | Dividend: ${dividend.yieldCurrent || 0}%`,
+        // 전체 구조화된 데이터
+        basicInfo,
+        valuation,
+        dividend,
+        profitability,
+        incomeStatement,
+        balanceSheet,
+        cashFlow,
+        performance,
+        technical,
+        additional
+      };
+      console.log(`[TradingView] Found info for ${ticker}: ${stockInfo.name} ($${stockInfo.currentPrice})`);
+      return stockInfo;
+    } catch (error) {
+      console.error("[TradingView] Crawling error:", error.message);
+      return null;
+    }
+  });
+  ipcMain.handle("news-crawl", async (_, { ticker }) => {
+    try {
+      console.log(`[Toss News] Crawling ${ticker}...`);
+      const BASE_URL = "https://wts-cert-api.tossinvest.com/api";
+      const url = `${BASE_URL}/v3/search-all/wts-auto-complete`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: ticker,
+          sections: [
+            { type: "NEWS" }
+          ]
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`Toss News API error: ${response.status}`);
+      }
+      const data = await response.json();
+      const newsSection = data.result?.find((s) => s.type === "NEWS");
+      const newsItems = newsSection?.data?.items || [];
+      const newsArticles = newsItems.map((article) => ({
+        author: article.source || "Unknown",
+        title: article.title || "",
+        content: article.summary || "",
+        createdAt: article.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+        thumbnail: article.imageUrls?.[0]
+      }));
+      console.log(`[Toss News] Found ${newsArticles.length} articles for ${ticker}`);
+      return newsArticles;
+    } catch (error) {
+      console.error("[Toss News] Crawling error:", error.message);
+      return [];
     }
   });
   app.whenReady().then(createWindow);

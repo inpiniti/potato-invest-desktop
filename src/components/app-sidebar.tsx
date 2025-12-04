@@ -23,6 +23,8 @@ import { useTrendHook } from "@/hooks/useTrendHook"
 import { TrendAnalysisDialog } from "@/components/trend-analysis-dialog"
 import { Badge } from "@/components/ui/badge"
 import { useTrendStore } from "@/stores/useTrendStore"
+import { useStockHook } from "@/hooks/useStockHook"
+import { useStockStore } from "@/stores/useStockStore"
 
 // This is sample data
 const data = {
@@ -137,8 +139,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setOpen } = useSidebar()
   const { holdings } = useBalanceStore()
   const { sp500 } = useSP500Store()
-  const { getTrendMinutes } = useTrendHook()
   const { getTrendByTicker } = useTrendStore()
+  const { getInfo, getNews, getToss } = useStockHook()
+  const { setTicker } = useStockStore()
 
   const formatCurrency = (value: string) => {
     const num = parseFloat(value)
@@ -175,19 +178,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // S&P 500 종목 클릭 핸들러
   const handleStockClick = async (ticker: string, exchange: string) => {
     try {
-      console.log(`${ticker} (${exchange}) 분봉 추세 분석 중...`)
+      console.log(`${ticker} 종목 선택 및 크롤링 시작...`)
       
-      // 거래소 코드 변환 (NYSE -> NYS, NASDAQ -> NAS)
-      const exchangeCode = exchange === 'NASDAQ' ? 'NAS' : 'NYS'
+      // 1. ticker 설정
+      setTicker(ticker)
       
-      const trend = await getTrendMinutes({ ticker, exchange: exchangeCode })
-      console.log(`${ticker} 분봉 이동평균 추세:`, trend)
-      console.log(`  📊 MA20: ${trend.ma20}`)
-      console.log(`  📊 MA50: ${trend.ma50}`)
-      console.log(`  📊 MA100: ${trend.ma100}`)
-      console.log(`  📊 MA200: ${trend.ma200}`)
+      // 2. 모든 크롤링 병렬 실행
+      const [infoResult, newsResult, tossResult] = await Promise.allSettled([
+        getInfo(ticker),
+        getNews(ticker),
+        getToss(ticker),
+      ])
+      
+      // 결과 로깅
+      console.log(`${ticker} 크롤링 완료:`)
+      console.log('  - 종목 정보:', infoResult.status === 'fulfilled' ? '성공' : '실패')
+      console.log('  - 뉴스:', newsResult.status === 'fulfilled' ? `${(newsResult.value || []).length}개` : '실패')
+      console.log('  - 토스:', tossResult.status === 'fulfilled' ? `${(tossResult.value || []).length}개` : '실패')
+      
     } catch (error) {
-      console.error(`${ticker} 분봉 추세 분석 실패:`, error)
+      console.error(`${ticker} 크롤링 실패:`, error)
     }
   }
 

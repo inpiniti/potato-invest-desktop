@@ -1,6 +1,8 @@
 import { useEffect } from "react"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
+import { MainContent } from "@/components/main-content"
+import { RightPanel } from "@/components/right-panel"
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useSettingStore } from "@/stores/useSettingStore"
@@ -156,7 +158,20 @@ export default function App() {
         } as React.CSSProperties
       }
     >
-      <AppSidebar />
+      <div className="flex h-screen w-full">
+        {/* 좌측: 사이드바 */}
+        <AppSidebar />
+        
+        {/* 중앙: 메인 컨텐츠 */}
+        <main className="flex-1 overflow-hidden">
+          <MainContent />
+        </main>
+        
+        {/* 우측: 뉴스/커뮤니티 패널 */}
+        <aside className="w-80 border-l overflow-hidden">
+          <RightPanel />
+        </aside>
+      </div>
     </SidebarProvider>
   )
 }

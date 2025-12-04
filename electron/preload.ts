@@ -47,6 +47,11 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
         exchange: 'NAS' | 'NYS';
     }) => ipcRenderer.invoke('korea-invest-minutes', params),
     sp500Fetch: () => ipcRenderer.invoke('sp500-fetch'),
+    
+    // Crawling API
+    tossCrawl: (ticker: string) => ipcRenderer.invoke('toss-crawl', { ticker }),
+    tradingViewCrawl: (ticker: string) => ipcRenderer.invoke('tradingview-crawl', { ticker }),
+    newsCrawl: (ticker: string) => ipcRenderer.invoke('news-crawl', { ticker }),
 
     // You can expose other APTs you need here.
     // ...
