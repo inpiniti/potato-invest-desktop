@@ -2,6 +2,7 @@ import { useStockStore } from '@/stores/useStockStore'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { User } from 'lucide-react'
 
 export function RightPanel() {
   const { ticker, news, toss } = useStockStore()
@@ -71,13 +72,17 @@ export function RightPanel() {
                 <Card key={index} className="hover:bg-accent/50 transition-colors">
                   <CardHeader className="p-3">
                     <div className="flex items-start gap-2">
-                      {/* 프로필 이미지 */}
-                      {comment.profilePictureUrl && (
+                      {/* 프로필 이미지 또는 기본 아이콘 */}
+                      {comment.profilePictureUrl && comment.profilePictureUrl.includes('static.toss.im') ? (
                         <img 
                           src={comment.profilePictureUrl} 
                           alt={comment.author}
                           className="w-8 h-8 rounded-full flex-shrink-0"
                         />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
