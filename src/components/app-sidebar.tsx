@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui/switch"
 import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { AboutDialog } from "@/components/about-dialog"
-import { useKoreainvestmentHook } from "@/hooks/useKoreainvestmentHook"
+import { useTrendHook } from "@/hooks/useTrendHook"
 
 // This is sample data
 const data = {
@@ -137,7 +137,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setOpen } = useSidebar()
   const { holdings } = useBalanceStore()
   const { sp500 } = useSP500Store()
-  const { getMinutes } = useKoreainvestmentHook()
+  const { getTrendMinutes } = useTrendHook()
 
   const formatCurrency = (value: string) => {
     const num = parseFloat(value)
@@ -148,15 +148,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // S&P 500 종목 클릭 핸들러
   const handleStockClick = async (ticker: string, exchange: string) => {
     try {
-      console.log(`${ticker} (${exchange}) 분봉 조회 중...`)
+      console.log(`${ticker} (${exchange}) 분봉 추세 분석 중...`)
       
       // 거래소 코드 변환 (NYSE -> NYS, NASDAQ -> NAS)
       const exchangeCode = exchange === 'NASDAQ' ? 'NAS' : 'NYS'
       
-      const minutes = await getMinutes({ ticker, exchange: exchangeCode })
-      console.log(`${ticker} 분봉 데이터 (총 ${minutes.length}개):`, minutes)
+      const trend = await getTrendMinutes({ ticker, exchange: exchangeCode })
+      console.log(`${ticker} 분봉 이동평균 추세:`, trend)
+      console.log(`  📊 MA20: ${trend.ma20}`)
+      console.log(`  📊 MA50: ${trend.ma50}`)
+      console.log(`  📊 MA100: ${trend.ma100}`)
+      console.log(`  📊 MA200: ${trend.ma200}`)
     } catch (error) {
-      console.error(`${ticker} 분봉 조회 실패:`, error)
+      console.error(`${ticker} 분봉 추세 분석 실패:`, error)
     }
   }
 
