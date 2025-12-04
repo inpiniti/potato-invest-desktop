@@ -1,10 +1,8 @@
-"use client"
-
 import * as React from "react"
 import { Command, Wallet, Flag } from "lucide-react"
 
 import { NavUser } from "@/components/nav-user"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
@@ -18,11 +16,13 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { Switch } from "@/components/ui/switch"
 import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { AboutDialog } from "@/components/about-dialog"
 import { useTrendHook } from "@/hooks/useTrendHook"
+import { TrendAnalysisDialog } from "@/components/trend-analysis-dialog"
+import { Badge } from "@/components/ui/badge"
+import { useTrendStore } from "@/stores/useTrendStore"
 
 // This is sample data
 const data = {
@@ -138,11 +138,38 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { holdings } = useBalanceStore()
   const { sp500 } = useSP500Store()
   const { getTrendMinutes } = useTrendHook()
+  const { getTrendByTicker } = useTrendStore()
 
   const formatCurrency = (value: string) => {
     const num = parseFloat(value)
     if (isNaN(num)) return '0'
     return num.toLocaleString('ko-KR', { maximumFractionDigits: 2 })
+  }
+
+  // 추세에 따른 Badge variant와 스타일 결정
+  const getTrendBadgeStyle = (trendType: string) => {
+    const isTransition = trendType.includes('전환')
+    
+    switch (trendType) {
+      case '상승':
+      case '상승전환':
+        return {
+          className: `h-4 px-1 text-[10px] bg-red-500 text-white hover:bg-red-600 ${isTransition ? 'ring-2 ring-red-300' : ''}`,
+          variant: 'destructive' as const
+        }
+      case '하락':
+      case '하락전환':
+        return {
+          className: `h-4 px-1 text-[10px] bg-blue-500 text-white hover:bg-blue-600 ${isTransition ? 'ring-2 ring-blue-300' : ''}`,
+          variant: 'default' as const
+        }
+      case '유지':
+      default:
+        return {
+          className: 'h-4 px-1 text-[10px] bg-gray-400 text-white hover:bg-gray-500',
+          variant: 'secondary' as const
+        }
+    }
   }
 
   // S&P 500 종목 클릭 핸들러
@@ -166,6 +193,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // About 다이얼로그 상태
   const [aboutOpen, setAboutOpen] = React.useState(false)
+  
+  // 트렌드 분석 다이얼로그 상태
+  const [trendAnalysisOpen, setTrendAnalysisOpen] = React.useState(false)
 
   return (
     <Sidebar
@@ -246,10 +276,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <div className="text-base font-medium text-foreground">
               {activeItem?.title}
             </div>
-            <Label className="flex items-center gap-2 text-sm">
-              <span>Unreads</span>
-              <Switch className="shadow-none" />
-            </Label>
+            {activeItem?.title === "S&P 500" && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => setTrendAnalysisOpen(true)}
+              >
+                트렌드 분석
+              </Button>
+            )}
           </div>
           <SidebarInput placeholder="Type to search..." />
         </SidebarHeader>
@@ -294,25 +330,48 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </p>
                   </div>
                 ) : (
-                  sp500.map((stock) => (
-                    <a
-                      href="#"
-                      key={stock.ticker}
-                      className="flex flex-col items-start gap-0.5 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        handleStockClick(stock.ticker, stock.exchange)
-                      }}
-                    >
-                      <div className="flex w-full items-center gap-2">
-                        <span className="text-sm font-medium">{stock.ticker}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">{stock.exchange}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground line-clamp-1">
-                        {stock.name}
-                      </span>
-                    </a>
-                  ))
+                  sp500.map((stock) => {
+                    const trend = getTrendByTicker(stock.ticker)
+                    
+                    return (
+                      <a
+                        href="#"
+                        key={stock.ticker}
+                        className="flex flex-col items-start gap-1 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleStockClick(stock.ticker, stock.exchange)
+                        }}
+                      >
+                        <div className="flex w-full items-center gap-2">
+                          <span className="text-sm font-medium">{stock.ticker}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">{stock.exchange}</span>
+                        </div>
+                        <div className="flex w-full gap-2">
+                          <Badge 
+                            {...(trend ? getTrendBadgeStyle(trend.ma20) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
+                          >
+                            20
+                          </Badge>
+                          <Badge 
+                            {...(trend ? getTrendBadgeStyle(trend.ma50) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
+                          >
+                            50
+                          </Badge>
+                          <Badge 
+                            {...(trend ? getTrendBadgeStyle(trend.ma100) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
+                          >
+                            100
+                          </Badge>
+                          <Badge 
+                            {...(trend ? getTrendBadgeStyle(trend.ma200) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
+                          >
+                            200
+                          </Badge>
+                        </div>
+                      </a>
+                    )
+                  })
                 )
               ) : (
                 // S&P 500 또는 다른 메뉴 (기존 mails)
@@ -340,6 +399,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       {/* About 다이얼로그 */}
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+      
+      {/* 트렌드 분석 다이얼로그 */}
+      <TrendAnalysisDialog open={trendAnalysisOpen} onOpenChange={setTrendAnalysisOpen} />
     </Sidebar>
   )
 }
