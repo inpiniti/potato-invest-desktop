@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   koreaInvestAuth: (credentials) => ipcRenderer.invoke("korea-invest-auth", credentials),
   koreaInvestBalance: (params) => ipcRenderer.invoke("korea-invest-balance", params),
   koreaInvestDaily: (params) => ipcRenderer.invoke("korea-invest-daily", params),
+  koreaInvestMinutes: (params) => ipcRenderer.invoke("korea-invest-minutes", params),
   sp500Fetch: () => ipcRenderer.invoke("sp500-fetch")
   // You can expose other APTs you need here.
   // ...

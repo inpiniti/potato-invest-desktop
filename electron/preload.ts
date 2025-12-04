@@ -39,6 +39,13 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
         ticker: string;
         exchange: 'NAS' | 'NYS';
     }) => ipcRenderer.invoke('korea-invest-daily', params),
+    koreaInvestMinutes: (params: {
+        accessToken: string;
+        appkey: string;
+        appsecret: string;
+        ticker: string;
+        exchange: 'NAS' | 'NYS';
+    }) => ipcRenderer.invoke('korea-invest-minutes', params),
     sp500Fetch: () => ipcRenderer.invoke('sp500-fetch'),
 
     // You can expose other APTs you need here.

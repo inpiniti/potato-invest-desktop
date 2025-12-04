@@ -32,6 +32,13 @@ declare global {
         ticker: string
         exchange: 'NAS' | 'NYS'
       }) => Promise<any[]>
+      koreaInvestMinutes: (params: {
+        accessToken: string
+        appkey: string
+        appsecret: string
+        ticker: string
+        exchange: 'NAS' | 'NYS'
+      }) => Promise<any[]>
       sp500Fetch: () => Promise<Array<{
         ticker: string
         name: string
