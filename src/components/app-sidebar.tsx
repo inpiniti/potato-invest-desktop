@@ -141,7 +141,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { sp500 } = useSP500Store()
   const { getTrendByTicker } = useTrendStore()
   const { getInfo, getNews, getToss } = useStockHook()
-  const { setTicker } = useStockStore()
+  const { ticker: selectedTicker, setTicker } = useStockStore()
 
   const formatCurrency = (value: string) => {
     const num = parseFloat(value)
@@ -347,7 +347,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <a
                         href="#"
                         key={stock.ticker}
-                        className="flex flex-col items-start gap-1 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        className={`flex flex-col items-start gap-1 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+                          selectedTicker === stock.ticker ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                        }`}
                         onClick={(e) => {
                           e.preventDefault()
                           handleStockClick(stock.ticker, stock.exchange)

@@ -1,10 +1,14 @@
 import { useStockStore } from '@/stores/useStockStore'
+import { useTradingStore } from '@/stores/useTradingStore'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
+import { TrendingUp } from 'lucide-react'
 
 export function MainContent() {
-  const { ticker, info, news, toss } = useStockStore()
+  const { ticker, info } = useStockStore()
+  const { addTrading, removeTrading, isInTrading } = useTradingStore()
 
   if (!ticker) {
     return (
@@ -14,9 +18,51 @@ export function MainContent() {
     )
   }
 
+  const inTrading = isInTrading(ticker)
+
+  const handleTradingToggle = () => {
+    if (inTrading) {
+      removeTrading(ticker)
+    } else {
+      addTrading(ticker, info?.name || ticker)
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
-      {/* 상단: 종목 정보 탭 */}
+      {/* 상태바: 주식 정보 */}
+      <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-sm font-semibold">{info?.name || ticker}</h2>
+            <p className="text-xs text-muted-foreground">{ticker} · {info?.basicInfo?.exchange}</p>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <div>
+              <span className="font-semibold">${info?.currentPrice}</span>
+            </div>
+            <div className={info?.changeRate && info.changeRate > 0 ? 'text-red-400' : 'text-blue-400'}>
+              <span className="font-medium">{info?.changeRate && info.changeRate > 0 ? '+' : ''}{info?.changeRate?.toFixed(2)}%</span>
+            </div>
+            <div className="text-muted-foreground">
+              <span className="text-xs">시가총액: {info?.marketCap}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* 트레이딩 버튼 */}
+        <Button
+          size="sm"
+          variant={inTrading ? "default" : "outline"}
+          onClick={handleTradingToggle}
+          className="gap-2"
+        >
+          <TrendingUp className="h-4 w-4" />
+          {inTrading ? '트레이딩 중' : '트레이딩 추가'}
+        </Button>
+      </div>
+
+      {/* 종목 정보 탭 */}
       <div className="flex-1 overflow-hidden">
         <Tabs defaultValue="overview" className="h-full flex flex-col">
           <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
@@ -48,7 +94,7 @@ export function MainContent() {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div><span className="text-muted-foreground">종목명:</span> {info?.name}</div>
                       <div><span className="text-muted-foreground">현재가:</span> ${info?.currentPrice}</div>
-                      <div><span className="text-muted-foreground">변동률:</span> <span className={info?.changeRate && info.changeRate > 0 ? 'text-red-400' : 'text-blue-400'}>{info?.changeRate}%</span></div>
+                      <div><span className="text-muted-foreground">변동률:</span> <span className={info?.changeRate && info.changeRate > 0 ? 'text-red-400' : 'text-blue-400'}>{info?.changeRate?.toFixed(2)}%</span></div>
                       <div><span className="text-muted-foreground">시가총액:</span> {info?.marketCap}</div>
                       <div><span className="text-muted-foreground">섹터:</span> {info?.basicInfo?.sector}</div>
                       <div><span className="text-muted-foreground">거래소:</span> {info?.basicInfo?.exchange}</div>
@@ -70,7 +116,7 @@ export function MainContent() {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div><span className="text-muted-foreground">P/E (TTM):</span> {info?.valuation?.priceEarningsTTM?.toFixed(2)}</div>
                       <div><span className="text-muted-foreground">P/S:</span> {info?.valuation?.priceSalesCurrent?.toFixed(2)}</div>
-                      <div><span className="text-muted-foreground">P/B:</span> {info?.valuation?.priceBookFQ?.toFixed(2)}</div>
+                      <div><span className="text-muted-foreground">P/B:</span> {info?.valuation?.priceBookFQ?.toFixed(2) || 'N/A'}</div>
                       <div><span className="text-muted-foreground">P/FCF:</span> {info?.valuation?.priceFCFTTM?.toFixed(2)}</div>
                       <div><span className="text-muted-foreground">EV/Revenue:</span> {info?.valuation?.evToRevenueTTM?.toFixed(2)}</div>
                       <div><span className="text-muted-foreground">EV/EBIT:</span> {info?.valuation?.evToEbitTTM?.toFixed(2)}</div>
@@ -122,7 +168,7 @@ export function MainContent() {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div><span className="text-muted-foreground">유동비율:</span> {info?.balanceSheet?.currentRatioFQ?.toFixed(2)}</div>
                       <div><span className="text-muted-foreground">당좌비율:</span> {info?.balanceSheet?.quickRatioFQ?.toFixed(2)}</div>
-                      <div><span className="text-muted-foreground">부채비율:</span> {info?.balanceSheet?.debtToEquityFQ?.toFixed(2)}</div>
+                      <div><span className="text-muted-foreground">부채비율:</span> {info?.balanceSheet?.debtToEquityFQ?.toFixed(2) || 'N/A'}</div>
                       <div><span className="text-muted-foreground">현금/부채:</span> {info?.balanceSheet?.cashToDebtFQ?.toFixed(2)}</div>
                     </div>
                   </CardContent>
@@ -134,10 +180,10 @@ export function MainContent() {
                   </CardHeader>
                   <CardContent className="p-3 pt-0">
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div><span className="text-muted-foreground">영업CF:</span> ${(info?.cashFlow?.operatingCFTTM / 1e9)?.toFixed(2)}B</div>
-                      <div><span className="text-muted-foreground">투자CF:</span> ${(info?.cashFlow?.investingCFTTM / 1e9)?.toFixed(2)}B</div>
-                      <div><span className="text-muted-foreground">재무CF:</span> ${(info?.cashFlow?.financingCFTTM / 1e9)?.toFixed(2)}B</div>
-                      <div><span className="text-muted-foreground">FCF:</span> ${(info?.cashFlow?.freeCFTTM / 1e9)?.toFixed(2)}B</div>
+                      <div><span className="text-muted-foreground">영업CF:</span> ${((info?.cashFlow?.operatingCFTTM || 0) / 1e9).toFixed(2)}B</div>
+                      <div><span className="text-muted-foreground">투자CF:</span> ${((info?.cashFlow?.investingCFTTM || 0) / 1e9).toFixed(2)}B</div>
+                      <div><span className="text-muted-foreground">재무CF:</span> ${((info?.cashFlow?.financingCFTTM || 0) / 1e9).toFixed(2)}B</div>
+                      <div><span className="text-muted-foreground">FCF:</span> ${((info?.cashFlow?.freeCFTTM || 0) / 1e9).toFixed(2)}B</div>
                     </div>
                   </CardContent>
                 </Card>
