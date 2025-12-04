@@ -304,5 +304,96 @@ if (!gotTheLock) {
         }
     })
 
+    // 한국투자증권 해외주식 기간별시세 핸들러 (총 300개 데이터 조회)
+    ipcMain.handle('korea-invest-daily', async (_, { accessToken, appkey, appsecret, ticker, exchange }) => {
+        try {
+            const allData: any[] = []
+            let bymd = '' // 첫 조회는 오늘 날짜 (공백)
+            const targetCount = 300 // 목표 데이터 개수
+            const maxIterations = 3 // 최대 3번 호출
+
+            console.log(`${ticker} 일별 시세 조회 시작 (목표: ${targetCount}개)`)
+
+            for (let i = 0; i < maxIterations; i++) {
+                const url = new URL('https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice')
+                url.searchParams.append('AUTH', '')
+                url.searchParams.append('EXCD', exchange) // NAS: 나스닥, NYS: 뉴욕
+                url.searchParams.append('SYMB', ticker)
+                url.searchParams.append('GUBN', '0')
+                url.searchParams.append('BYMD', bymd)
+                url.searchParams.append('MODP', '0')
+
+                console.log(`  ${i + 1}번째 조회 (BYMD: ${bymd || '오늘'})`)
+
+                const response = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json; charset=UTF-8',
+                        'authorization': `Bearer ${accessToken}`,
+                        'appkey': appkey,
+                        'appsecret': appsecret,
+                        'tr_id': 'HHDFS76240000',
+                    },
+                })
+
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    throw new Error(`일별 시세 조회 실패: ${response.status} ${response.statusText} - ${errorText}`)
+                }
+
+                const data = await response.json()
+                const output2 = data.output2 || []
+
+                if (output2.length === 0) {
+                    console.log(`  ${i + 1}번째 조회 결과: 데이터 없음 (조회 종료)`)
+                    break
+                }
+
+                console.log(`  ${i + 1}번째 조회 결과: ${output2.length}개 (누적: ${allData.length + output2.length}개)`)
+
+                // 데이터 추가
+                allData.push(...output2)
+
+                // 목표 개수에 도달하면 종료
+                if (allData.length >= targetCount) {
+                    console.log(`  목표 개수 도달 (${allData.length}개)`)
+                    break
+                }
+
+                // 다음 조회를 위한 BYMD 설정 (마지막 데이터의 날짜 - 1일)
+                const lastDate = output2[output2.length - 1].xymd
+                if (lastDate) {
+                    // YYYYMMDD 형식의 날짜를 Date 객체로 변환
+                    const year = parseInt(lastDate.substring(0, 4))
+                    const month = parseInt(lastDate.substring(4, 6)) - 1 // 월은 0부터 시작
+                    const day = parseInt(lastDate.substring(6, 8))
+                    const date = new Date(year, month, day)
+                    
+                    // 하루 빼기
+                    date.setDate(date.getDate() - 1)
+                    
+                    // YYYYMMDD 형식으로 변환
+                    bymd = date.getFullYear().toString() + 
+                           (date.getMonth() + 1).toString().padStart(2, '0') + 
+                           date.getDate().toString().padStart(2, '0')
+                    
+                    console.log(`  다음 조회 기준일: ${bymd}`)
+                } else {
+                    console.log(`  마지막 날짜 정보 없음 (조회 종료)`)
+                    break
+                }
+
+                // API 호출 간격 (Rate Limit 방지)
+                await new Promise(resolve => setTimeout(resolve, 200))
+            }
+
+            console.log(`${ticker} 일별 시세 조회 완료: 총 ${allData.length}개`)
+            return allData
+        } catch (error: any) {
+            console.error('한투 일별 시세 조회 에러:', error)
+            throw error
+        }
+    })
+
     app.whenReady().then(createWindow)
 }

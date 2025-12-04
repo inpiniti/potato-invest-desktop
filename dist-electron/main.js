@@ -294,5 +294,69 @@ if (!gotTheLock) {
       throw error;
     }
   });
+  ipcMain.handle("korea-invest-daily", async (_, { accessToken, appkey, appsecret, ticker, exchange }) => {
+    try {
+      const allData = [];
+      let bymd = "";
+      const targetCount = 300;
+      const maxIterations = 3;
+      console.log(`${ticker} 일별 시세 조회 시작 (목표: ${targetCount}개)`);
+      for (let i = 0; i < maxIterations; i++) {
+        const url = new URL("https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice");
+        url.searchParams.append("AUTH", "");
+        url.searchParams.append("EXCD", exchange);
+        url.searchParams.append("SYMB", ticker);
+        url.searchParams.append("GUBN", "0");
+        url.searchParams.append("BYMD", bymd);
+        url.searchParams.append("MODP", "0");
+        console.log(`  ${i + 1}번째 조회 (BYMD: ${bymd || "오늘"})`);
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json; charset=UTF-8",
+            "authorization": `Bearer ${accessToken}`,
+            "appkey": appkey,
+            "appsecret": appsecret,
+            "tr_id": "HHDFS76240000"
+          }
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`일별 시세 조회 실패: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+        const data = await response.json();
+        const output2 = data.output2 || [];
+        if (output2.length === 0) {
+          console.log(`  ${i + 1}번째 조회 결과: 데이터 없음 (조회 종료)`);
+          break;
+        }
+        console.log(`  ${i + 1}번째 조회 결과: ${output2.length}개 (누적: ${allData.length + output2.length}개)`);
+        allData.push(...output2);
+        if (allData.length >= targetCount) {
+          console.log(`  목표 개수 도달 (${allData.length}개)`);
+          break;
+        }
+        const lastDate = output2[output2.length - 1].xymd;
+        if (lastDate) {
+          const year = parseInt(lastDate.substring(0, 4));
+          const month = parseInt(lastDate.substring(4, 6)) - 1;
+          const day = parseInt(lastDate.substring(6, 8));
+          const date = new Date(year, month, day);
+          date.setDate(date.getDate() - 1);
+          bymd = date.getFullYear().toString() + (date.getMonth() + 1).toString().padStart(2, "0") + date.getDate().toString().padStart(2, "0");
+          console.log(`  다음 조회 기준일: ${bymd}`);
+        } else {
+          console.log(`  마지막 날짜 정보 없음 (조회 종료)`);
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      console.log(`${ticker} 일별 시세 조회 완료: 총 ${allData.length}개`);
+      return allData;
+    } catch (error) {
+      console.error("한투 일별 시세 조회 에러:", error);
+      throw error;
+    }
+  });
   app.whenReady().then(createWindow);
 }

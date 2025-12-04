@@ -25,6 +25,13 @@ declare global {
         holdings: any[]
         balance: any
       }>
+      koreaInvestDaily: (params: {
+        accessToken: string
+        appkey: string
+        appsecret: string
+        ticker: string
+        exchange: 'NAS' | 'NYS'
+      }) => Promise<any[]>
       sp500Fetch: () => Promise<Array<{
         ticker: string
         name: string

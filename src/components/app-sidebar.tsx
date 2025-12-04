@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/switch"
 import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { AboutDialog } from "@/components/about-dialog"
+import { useKoreainvestmentHook } from "@/hooks/useKoreainvestmentHook"
 
 // This is sample data
 const data = {
@@ -136,11 +137,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setOpen } = useSidebar()
   const { holdings } = useBalanceStore()
   const { sp500 } = useSP500Store()
+  const { getDaily } = useKoreainvestmentHook()
 
   const formatCurrency = (value: string) => {
     const num = parseFloat(value)
     if (isNaN(num)) return '0'
     return num.toLocaleString('ko-KR', { maximumFractionDigits: 2 })
+  }
+
+  // S&P 500 종목 클릭 핸들러
+  const handleStockClick = async (ticker: string, exchange: string) => {
+    try {
+      console.log(`${ticker} (${exchange}) 일별 시세 조회 중...`)
+      
+      // 거래소 코드 변환 (NYSE -> NYS, NASDAQ -> NAS)
+      const exchangeCode = exchange === 'NASDAQ' ? 'NAS' : 'NYS'
+      
+      const dailyData = await getDaily({ ticker, exchange: exchangeCode })
+      console.log(`${ticker} 일별 시세 데이터:`, dailyData)
+    } catch (error) {
+      console.error(`${ticker} 일별 시세 조회 실패:`, error)
+    }
   }
 
   // About 다이얼로그 상태
@@ -278,6 +295,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       href="#"
                       key={stock.ticker}
                       className="flex flex-col items-start gap-0.5 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleStockClick(stock.ticker, stock.exchange)
+                      }}
                     >
                       <div className="flex w-full items-center gap-2">
                         <span className="text-sm font-medium">{stock.ticker}</span>
