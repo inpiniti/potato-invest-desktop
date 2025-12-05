@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useTradingStore } from '@/stores/useTradingStore'
 import { useAuthStore } from '@/stores/useAuthStore'
-import type { TradingHistory, TradingRecord } from '@/types/trading'
+import type { TradingHistory, TradingRecord, TradingListItem, TradingListRecord } from '@/types/trading'
 
 
 /**
- * 트레이딩 히스토리 관리 훅
+ * 트레이딩 관리 훅 (히스토리 + 목록)
  * 
  * DB 중심 아키텍처:
  * - 모든 CUD 작업은 Supabase DB에 먼저 수행
@@ -16,7 +16,7 @@ import type { TradingHistory, TradingRecord } from '@/types/trading'
 export function useTradingHook() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { setHistories } = useTradingStore()
+  const { setHistories, setTradings } = useTradingStore()
   const { kakaoToken } = useAuthStore()
 
   /**
@@ -49,8 +49,157 @@ export function useTradingHook() {
   })
 
   /**
-   * 트레이딩 히스토리 조회 (Supabase에서 가져와서 Store에 설정)
-   * 현재 로그인한 사용자(kakaoToken)의 데이터만 조회
+   * DB 레코드를 앱 타입으로 변환 (trading_list)
+   */
+  const mapRecordToListItem = (record: TradingListRecord): TradingListItem => ({
+    id: record.id,
+    uid: record.uid,
+    ticker: record.ticker,
+    name: record.name,
+    addedAt: record.added_at,
+  })
+
+  /**
+   * ========================================
+   * 트레이딩 목록 관련 함수
+   * ========================================
+   */
+
+  /**
+   * 트레이딩 목록 조회 (Supabase에서 가져와서 Store에 설정)
+   */
+  const fetchTradingList = async (): Promise<TradingListItem[]> => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      if (!kakaoToken) {
+        throw new Error('로그인이 필요합니다.')
+      }
+
+      const { data, error: fetchError } = await supabase
+        .from('trading_list')
+        .select('*')
+        .eq('uid', kakaoToken)
+        .order('added_at', { ascending: false })
+
+      if (fetchError) {
+        throw new Error(`조회 실패: ${fetchError.message}`)
+      }
+
+      const tradingList = (data as TradingListRecord[]).map(mapRecordToListItem)
+      setTradings(tradingList)
+      return tradingList
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
+      setError(errorMessage)
+      console.error('fetchTradingList 오류:', err)
+      return []
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * 트레이딩 목록에 추가
+   */
+  const addTradingItem = async (ticker: string, name: string): Promise<TradingListItem | null> => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      if (!kakaoToken) {
+        throw new Error('로그인이 필요합니다.')
+      }
+
+      const id = `${ticker}_${kakaoToken}`
+
+      const recordToInsert = {
+        id,
+        uid: kakaoToken,
+        ticker,
+        name,
+        added_at: new Date().toISOString(),
+      }
+
+      console.log('📤 트레이딩 목록 추가:', recordToInsert)
+
+      const { data, error: insertError } = await supabase
+        .from('trading_list')
+        .insert(recordToInsert)
+        .select()
+        .single()
+
+      if (insertError) {
+        console.error('❌ 트레이딩 목록 추가 에러:', insertError)
+        throw new Error(`추가 실패: ${insertError.message}`)
+      }
+
+      console.log('✅ 트레이딩 목록 추가 성공:', data)
+
+      await fetchTradingList()
+
+      return mapRecordToListItem(data as TradingListRecord)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
+      setError(errorMessage)
+      console.error('❌ addTradingItem 오류:', err)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * 트레이딩 목록에서 제거
+   */
+  const removeTradingItem = async (ticker: string): Promise<boolean> => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      if (!kakaoToken) {
+        throw new Error('로그인이 필요합니다.')
+      }
+
+      const id = `${ticker}_${kakaoToken}`
+
+      console.log('🗑️ 트레이딩 목록 삭제:', id)
+
+      const { error: deleteError } = await supabase
+        .from('trading_list')
+        .delete()
+        .eq('id', id)
+        .eq('uid', kakaoToken)
+
+      if (deleteError) {
+        console.error('❌ 트레이딩 목록 삭제 에러:', deleteError)
+        throw new Error(`삭제 실패: ${deleteError.message}`)
+      }
+
+      console.log('✅ 트레이딩 목록 삭제 성공')
+
+      await fetchTradingList()
+
+      return true
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
+      setError(errorMessage)
+      console.error('❌ removeTradingItem 오류:', err)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * ========================================
+   * 트레이딩 히스토리 관련 함수
+   * ========================================
+   */
+
+  /**
+   * 트레이딩 히스토리 조회
    */
   const fetchHistories = async (): Promise<TradingHistory[]> => {
     setLoading(true)
@@ -86,7 +235,6 @@ export function useTradingHook() {
 
   /**
    * 새 트레이딩 히스토리 추가
-   * DB에 추가 후 자동으로 조회하여 Store 동기화
    */
   const addHistory = async (
     history: Omit<TradingHistory, 'id' | 'uid'>
@@ -101,7 +249,6 @@ export function useTradingHook() {
         throw new Error(msg)
       }
 
-      // 고유 ID 생성
       const id = `${history.ticker}_${history.buyTime}_${Date.now()}`
 
       const recordToInsert = {
@@ -126,7 +273,6 @@ export function useTradingHook() {
 
       console.log('✅ Supabase INSERT 성공:', data)
 
-      // DB 추가 성공 후 전체 조회하여 Store 동기화
       await fetchHistories()
 
       return mapRecordToHistory(data as TradingRecord)
@@ -141,8 +287,7 @@ export function useTradingHook() {
   }
 
   /**
-   * 트레이딩 히스토리 업데이트 (주로 판매 정보 추가)
-   * DB 업데이트 후 자동으로 조회하여 Store 동기화
+   * 트레이딩 히스토리 업데이트
    */
   const updateHistory = async (
     id: string,
@@ -156,7 +301,6 @@ export function useTradingHook() {
         throw new Error('로그인이 필요합니다.')
       }
 
-      // camelCase -> snake_case 변환
       const recordUpdates: Partial<Omit<TradingRecord, 'id' | 'uid' | 'created_at' | 'updated_at'>> = {}
       if (updates.ticker !== undefined) recordUpdates.ticker = updates.ticker
       if (updates.buyPrice !== undefined) recordUpdates.buy_price = updates.buyPrice
@@ -170,7 +314,7 @@ export function useTradingHook() {
         .from('trading')
         .update(recordUpdates)
         .eq('id', id)
-        .eq('uid', kakaoToken) // 본인 데이터만 수정 가능
+        .eq('uid', kakaoToken)
         .select()
         .single()
 
@@ -178,14 +322,13 @@ export function useTradingHook() {
         throw new Error(`업데이트 실패: ${updateError.message}`)
       }
 
-      // DB 업데이트 성공 후 전체 조회하여 Store 동기화
       await fetchHistories()
 
       return mapRecordToHistory(data as TradingRecord)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
       setError(errorMessage)
-      console.error('updateHistory 오류:', err)
+      console.error('❌ updateHistory 오류:', err)
       return null
     } finally {
       setLoading(false)
@@ -194,12 +337,7 @@ export function useTradingHook() {
 
   /**
    * 매수 (LIFO 스택에 추가)
-   * 새로운 포지션을 생성하여 스택에 추가
-   * 
-   * 수량 계산 로직:
-   * - 해당 티커의 미체결 포지션 개수를 센다
-   * - 수량 = 2^(미체결 개수)
-   * - 예: 0개 → 1, 1개 → 2, 2개 → 4, 3개 → 8
+   * 수량 = 2^(미체결 개수)
    */
   const buyStock = async (ticker: string): Promise<TradingHistory | null> => {
     try {
@@ -207,23 +345,19 @@ export function useTradingHook() {
         throw new Error('로그인이 필요합니다.')
       }
 
-      // 해당 티커의 미체결 포지션 개수 조회
       const { data, error: fetchError } = await supabase
         .from('trading')
         .select('id', { count: 'exact', head: false })
         .eq('uid', kakaoToken)
         .eq('ticker', ticker)
-        .is('sell_price', null) // 미체결만
+        .is('sell_price', null)
 
       if (fetchError) {
         console.error('미체결 포지션 조회 실패:', fetchError)
         throw new Error(`조회 실패: ${fetchError.message}`)
       }
 
-      // 미체결 포지션 개수
       const openPositionCount = data?.length || 0
-      
-      // 수량 = 2^n (1, 2, 4, 8, 16, ...)
       const quantity = Math.pow(2, openPositionCount)
 
       console.log(`📈 매수: 티커=${ticker}, 미체결=${openPositionCount}개, 수량=${quantity}`)
@@ -246,13 +380,7 @@ export function useTradingHook() {
 
   /**
    * 매도 (LIFO 스택에서 제거)
-   * 가장 최근에 매수한 미체결 포지션을 찾아 판매 정보 업데이트
-   * 
-   * LIFO 로직 (스택):
-   * - 미체결 포지션(sellPrice === null)만 필터링
-   * - buyTime 기준 내림차순 정렬 (가장 최근 것 우선)
-   * - 첫 번째 항목을 판매 처리
-   * - 판매 수량 = 해당 포지션의 매수 수량과 동일
+   * 가장 최근 매수한 포지션 판매
    */
   const sellStock = async (ticker: string): Promise<TradingHistory | null> => {
     setLoading(true)
@@ -263,14 +391,13 @@ export function useTradingHook() {
         throw new Error('로그인이 필요합니다.')
       }
 
-      // 해당 티커의 미체결 포지션 조회 (LIFO: 가장 최근 것 우선)
       const { data, error: fetchError } = await supabase
         .from('trading')
         .select('*')
         .eq('uid', kakaoToken)
         .eq('ticker', ticker)
-        .is('sell_price', null) // 미체결 포지션만
-        .order('buy_time', { ascending: false }) // 최근 순서 (LIFO)
+        .is('sell_price', null)
+        .order('buy_time', { ascending: false })
         .limit(1)
 
       if (fetchError) {
@@ -281,10 +408,7 @@ export function useTradingHook() {
         throw new Error('매수한 수량이 부족해요')
       }
 
-      // 가장 최근 미체결 포지션 판매 처리
       const latestPosition = data[0] as TradingRecord
-      
-      // 판매 수량 = 매수 수량과 동일
       const sellQuantity = latestPosition.buy_quantity
 
       console.log(`📉 매도: 티커=${ticker}, 수량=${sellQuantity}`)
@@ -307,6 +431,11 @@ export function useTradingHook() {
   }
 
   return {
+    // 트레이딩 목록
+    fetchTradingList,
+    addTradingItem,
+    removeTradingItem,
+    // 트레이딩 히스토리
     fetchHistories,
     addHistory,
     updateHistory,

@@ -29,3 +29,27 @@ export interface TradingRecord {
   created_at?: string
   updated_at?: string
 }
+
+/**
+ * 트레이딩 목록 아이템 타입
+ */
+export interface TradingListItem {
+  id: string // 고유 ID (ticker_uid 형식)
+  uid: string // 사용자 UID (kakaotoken)
+  ticker: string // 티커 심볼
+  name: string // 종목명
+  addedAt: string // 추가 시간 (ISO 8601 형식)
+}
+
+/**
+ * Supabase trading_list 테이블 레코드 타입 (snake_case)
+ */
+export interface TradingListRecord {
+  id: string
+  uid: string
+  ticker: string
+  name: string
+  added_at: string
+  created_at?: string
+  updated_at?: string
+}

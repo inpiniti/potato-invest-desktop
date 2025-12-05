@@ -9,13 +9,15 @@ import { useSettingStore } from "@/stores/useSettingStore"
 import { useAccountStore } from "@/stores/useAccountStore"
 import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
+import { useTradingHook } from "@/hooks/useTradingHook"
 
 export default function App() {
-  const { login, logout } = useAuthStore()
+  const { login, logout, kakaoToken } = useAuthStore()
   const { darkMode } = useSettingStore()
   const { accessToken, selectedAccount } = useAccountStore()
   const { setHoldings, setBalance } = useBalanceStore()
   const { setSP500 } = useSP500Store()
+  const { fetchTradingList, fetchHistories } = useTradingHook()
 
   // 다크모드 초기화
   useEffect(() => {
@@ -61,6 +63,15 @@ export default function App() {
 
     return () => subscription.unsubscribe()
   }, [login, logout])
+
+  // 로그인 시 트레이딩 데이터 자동 로드
+  useEffect(() => {
+    if (kakaoToken) {
+      console.log('로그인 감지 - 트레이딩 데이터 로드 시작...')
+      fetchTradingList()
+      fetchHistories()
+    }
+  }, [kakaoToken])
 
   // 앱 시작 시 토큰이 있으면 자동 잔고 조회
   useEffect(() => {

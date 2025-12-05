@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useStockStore } from '@/stores/useStockStore'
 import { useTradingStore } from '@/stores/useTradingStore'
 import { useTradingHook } from '@/hooks/useTradingHook'
@@ -6,11 +7,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { TrendingUp, X, ShoppingCart, DollarSign } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export function MainContent() {
   const { ticker, info } = useStockStore()
-  const { tradings, addTrading, removeTrading, isInTrading } = useTradingStore()
-  const { buyStock, sellStock } = useTradingHook()
+  const { tradings, isInTrading } = useTradingStore()
+  const { 
+    addTradingItem, 
+    removeTradingItem, 
+    buyStock, 
+    sellStock 
+  } = useTradingHook()
+
+  // Dialog 상태 관리
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogConfig, setDialogConfig] = useState({
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  })
 
   if (!ticker) {
     return (
@@ -22,12 +46,45 @@ export function MainContent() {
 
   const inTrading = isInTrading(ticker)
 
+  // Dialog 열기 헬퍼 함수
+  const openDialog = (title: string, description: string, onConfirm: () => void) => {
+    setDialogConfig({ title, description, onConfirm })
+    setDialogOpen(true)
+  }
+
+  // 트레이딩 추가/삭제
   const handleTradingToggle = () => {
     if (inTrading) {
-      removeTrading(ticker)
+      openDialog(
+        '트레이딩 목록에서 제거',
+        `${ticker}를 트레이딩 목록에서 제거하시겠습니까?`,
+        async () => {
+          await removeTradingItem(ticker)
+          setDialogOpen(false)
+        }
+      )
     } else {
-      addTrading(ticker, info?.name || ticker)
+      openDialog(
+        '트레이딩 목록에 추가',
+        `${ticker}를 트레이딩 목록에 추가하시겠습니까?`,
+        async () => {
+          await addTradingItem(ticker, info?.name || ticker)
+          setDialogOpen(false)
+        }
+      )
     }
+  }
+
+  // 패널에서 X 버튼 클릭
+  const handleRemoveClick = (tradingTicker: string, tradingName: string) => {
+    openDialog(
+      '트레이딩 목록에서 제거',
+      `${tradingName} (${tradingTicker})를 트레이딩 목록에서 제거하시겠습니까?`,
+      async () => {
+        await removeTradingItem(tradingTicker)
+        setDialogOpen(false)
+      }
+    )
   }
 
   // 매수 핸들러
@@ -46,8 +103,6 @@ export function MainContent() {
     if (result) {
       alert(`✅ 매도 완료!\n티커: ${tradingTicker}\n수량: ${result.sellQuantity}\n가격: $${result.sellPrice}`)
     }
-    // sellStock에서 에러 발생 시 이미 error 상태에 저장되어 있음
-    // 에러 메시지는 sellStock 내부에서 처리됨
   }
 
   return (
@@ -343,7 +398,7 @@ export function MainContent() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => removeTrading(trading.ticker)}
+                              onClick={() => handleRemoveClick(trading.ticker, trading.name)}
                               className="h-6 w-6 p-0"
                             >
                               <X className="h-4 w-4" />
@@ -364,6 +419,24 @@ export function MainContent() {
           )}
         </div>
       </div>
+
+      {/* 확인 Dialog */}
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{dialogConfig.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {dialogConfig.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={dialogConfig.onConfirm}>
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
