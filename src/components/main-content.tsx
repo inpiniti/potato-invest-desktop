@@ -1,14 +1,16 @@
 import { useStockStore } from '@/stores/useStockStore'
 import { useTradingStore } from '@/stores/useTradingStore'
+import { useTradingHook } from '@/hooks/useTradingHook'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, X } from 'lucide-react'
+import { TrendingUp, X, ShoppingCart, DollarSign } from 'lucide-react'
 
 export function MainContent() {
   const { ticker, info } = useStockStore()
   const { tradings, addTrading, removeTrading, isInTrading } = useTradingStore()
+  const { buyStock, sellStock } = useTradingHook()
 
   if (!ticker) {
     return (
@@ -26,6 +28,26 @@ export function MainContent() {
     } else {
       addTrading(ticker, info?.name || ticker)
     }
+  }
+
+  // 매수 핸들러
+  const handleBuy = async (tradingTicker: string) => {
+    const result = await buyStock(tradingTicker)
+    if (result) {
+      alert(`✅ 매수 완료!\n티커: ${tradingTicker}\n수량: ${result.buyQuantity}\n가격: $${result.buyPrice}`)
+    } else {
+      alert('❌ 매수 실패. 다시 시도해주세요.')
+    }
+  }
+
+  // 매도 핸들러
+  const handleSell = async (tradingTicker: string) => {
+    const result = await sellStock(tradingTicker)
+    if (result) {
+      alert(`✅ 매도 완료!\n티커: ${tradingTicker}\n수량: ${result.sellQuantity}\n가격: $${result.sellPrice}`)
+    }
+    // sellStock에서 에러 발생 시 이미 error 상태에 저장되어 있음
+    // 에러 메시지는 sellStock 내부에서 처리됨
   }
 
   return (
@@ -290,18 +312,45 @@ export function MainContent() {
                 {tradings.map((trading) => (
                   <Card key={trading.ticker} className="h-40 w-full">
                     <CardHeader className="p-3 flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-sm">{trading.ticker}</CardTitle>
-                        <p className="text-xs text-muted-foreground">{trading.name}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-sm">{trading.ticker}</CardTitle>
+                            <p className="text-xs text-muted-foreground">{trading.name}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {/* 매수 버튼 */}
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => handleBuy(trading.ticker)}
+                              className="h-7 gap-1 bg-red-500 hover:bg-red-600"
+                            >
+                              <ShoppingCart className="h-3 w-3" />
+                              <span className="text-xs">매수</span>
+                            </Button>
+                            {/* 매도 버튼 */}
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => handleSell(trading.ticker)}
+                              className="h-7 gap-1 bg-blue-500 hover:bg-blue-600"
+                            >
+                              <DollarSign className="h-3 w-3" />
+                              <span className="text-xs">매도</span>
+                            </Button>
+                            {/* 삭제 버튼 */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeTrading(trading.ticker)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeTrading(trading.ticker)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     </CardHeader>
                     <CardContent className="p-3 pt-0">
                       <div className="text-xs text-muted-foreground">
