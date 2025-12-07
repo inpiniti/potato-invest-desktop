@@ -25,6 +25,9 @@ interface AccountState {
   // 계좌 선택
   selectAccount: (cano: string) => void
   
+  // 웹소켓 접근 토큰 설정 (계좌별)
+  setApprovalKey: (cano: string, approvalKey: string) => void
+  
   // 모든 데이터 초기화 (로그아웃 시)
   reset: () => void
 }
@@ -93,6 +96,28 @@ export const useAccountStore = create<AccountState>()(
             return state
           }
           return { selectedAccount: account }
+        })
+      },
+      
+      // 웹소켓 접근 토큰 설정 (계좌별)
+      setApprovalKey: (cano, approvalKey) => {
+        set((state) => {
+          // 계좌 목록에서 해당 계좌 찾아서 approvalKey 업데이트
+          const newAccounts = state.accounts.map(acc => 
+            acc.cano === cano 
+              ? { ...acc, approvalKey }
+              : acc
+          )
+          
+          // 선택된 계좌도 업데이트
+          const newSelectedAccount = state.selectedAccount?.cano === cano
+            ? { ...state.selectedAccount, approvalKey }
+            : state.selectedAccount
+          
+          return {
+            accounts: newAccounts,
+            selectedAccount: newSelectedAccount
+          }
         })
       },
       

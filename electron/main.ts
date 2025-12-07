@@ -200,6 +200,36 @@ if (!gotTheLock) {
         }
     })
 
+    // 한국투자증권 웹소켓 접근 토큰 발급 핸들러
+    ipcMain.handle('korea-invest-approval', async (_, { appkey, appsecret }) => {
+        try {
+            const response = await fetch('https://openapi.koreainvestment.com:9443/oauth2/Approval', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+                body: JSON.stringify({
+                    grant_type: 'client_credentials',
+                    appkey,
+                    appsecret,
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error(`웹소켓 토큰 발급 실패: ${response.status} ${response.statusText}`)
+            }
+
+            const data = await response.json()
+            
+            return {
+                approvalKey: data.approval_key,
+            }
+        } catch (error: any) {
+            console.error('한투 웹소켓 토큰 발급 에러:', error)
+            throw error
+        }
+    })
+
     // 한국투자증권 잔고 조회 핸들러
     ipcMain.handle('korea-invest-balance', async (_, { accessToken, appkey, appsecret, cano, acntPrdtCd }) => {
         try {

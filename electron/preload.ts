@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     oauthLogin: (loginUrl: string) => ipcRenderer.invoke('oauth-login', loginUrl),
     koreaInvestAuth: (credentials: { appkey: string; appsecret: string }) => 
         ipcRenderer.invoke('korea-invest-auth', credentials),
+    koreaInvestApproval: (credentials: { appkey: string; appsecret: string }) => 
+        ipcRenderer.invoke('korea-invest-approval', credentials),
     koreaInvestBalance: (params: { 
         accessToken: string; 
         appkey: string; 

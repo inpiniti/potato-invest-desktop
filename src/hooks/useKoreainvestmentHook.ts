@@ -19,7 +19,50 @@ interface GetMinutesParams {
 export function useKoreainvestmentHook() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { accessToken, selectedAccount } = useAccountStore()
+  const { accessToken, selectedAccount, setApprovalKey } = useAccountStore()
+
+  /**
+   * 웹소켓 접근 토큰 발급
+   * @returns approval_key
+   */
+  const getWebSocketToken = async (): Promise<string> => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      // 필수 값 검증
+      if (!selectedAccount) {
+        throw new Error('선택된 계정이 없습니다. 계정을 선택해주세요.')
+      }
+
+      const { appkey, appsecret, cano } = selectedAccount
+
+      // IPC를 통해 메인 프로세스에서 API 호출
+      if (!window.ipcRenderer?.koreaInvestApproval) {
+        throw new Error('IPC 통신이 불가능합니다.')
+      }
+
+      const response = await window.ipcRenderer.koreaInvestApproval({
+        appkey,
+        appsecret,
+      })
+
+      const approvalKey = response.approvalKey
+
+      // 스토어에 저장
+      setApprovalKey(cano, approvalKey)
+
+      console.log('✅ 웹소켓 토큰 발급 완료:', cano)
+      return approvalKey
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
+      setError(errorMessage)
+      console.error('getWebSocketToken 오류:', err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
 
   /**
    * 해외주식 일별 시세 조회
@@ -112,6 +155,7 @@ export function useKoreainvestmentHook() {
   }
 
   return {
+    getWebSocketToken,
     getDaily,
     getMinutes,
     loading,

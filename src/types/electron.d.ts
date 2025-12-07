@@ -15,6 +15,9 @@ declare global {
         expiresIn: number
         tokenExpired: string
       }>
+      koreaInvestApproval: (credentials: { appkey: string; appsecret: string }) => Promise<{
+        approvalKey: string
+      }>
       koreaInvestBalance: (params: {
         accessToken: string
         appkey: string
