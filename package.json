@@ -31,6 +31,20 @@
       ],
       "signAndEditExecutable": false
     },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.finance"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Finance"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
