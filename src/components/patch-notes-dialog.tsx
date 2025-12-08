@@ -25,6 +25,22 @@ interface PatchVersion {
 
 const versions: PatchVersion[] = [
   {
+    version: "0.0.31",
+    date: "2025-12-08",
+    title: "트레이딩 목록 동기화 및 버그 수정",
+    content: `
+### 🛠️ 데이터 무결성 및 안정성 강화
+
+**주요 변경 사항:**
+- **트레이딩 목록 동기화**: 로컬 UI와 서버 데이터 간의 불일치를 해결하기 위해 중복 데이터를 자동으로 정리하는 \`cleanupDuplicates\` 로직을 추가했습니다.
+- **버그 수정**: 트레이딩 히스토리 추가 시 잘못된 변수 참조로 인해 발생하던 오류를 수정했습니다.
+
+**기술적 상세:**
+- \`src/hooks/useTradingHook.ts\` 내 중복 제거 알고리즘 구현
+- \`kakaoToken\` -> \`userId\` 변수명 참조 수정
+`
+  },
+  {
     version: "0.0.30",
     date: "2025-12-08",
     title: "패치 노트 고도화 및 버전 히스토리 사이드바",

@@ -243,7 +243,7 @@ export function useTradingHook() {
     setError(null)
 
     try {
-      if (!kakaoToken) {
+      if (!userId) {
         const msg = '로그인이 필요합니다. userId가 없습니다.'
         alert(msg)
         throw new Error(msg)
@@ -430,6 +430,50 @@ export function useTradingHook() {
     }
   }
 
+  /**
+   * 중복 데이터 정리 (방어적 코드)
+   * App.tsx에서 호출됨. 혹시라도 중복된 티커가 있다면 정리
+   */
+  const cleanupDuplicates = async () => {
+    try {
+      if (!userId) return
+
+      const { data, error } = await supabase
+        .from('trading_list')
+        .select('*')
+        .eq('uid', userId)
+
+      if (error || !data) return
+
+      // 티커별로 그룹화
+      const groups: Record<string, TradingListRecord[]> = {}
+      data.forEach((item: TradingListRecord) => {
+        if (!groups[item.ticker]) {
+          groups[item.ticker] = []
+        }
+        groups[item.ticker].push(item)
+      })
+
+      // 중복 제거
+      for (const ticker in groups) {
+        const items = groups[ticker]
+        if (items.length > 1) {
+          // added_at 기준으로 정렬 (최신순)
+          items.sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime())
+          
+          // 첫 번째(최신)만 남기고 나머지 삭제
+          const toDelete = items.slice(1)
+          for (const item of toDelete) {
+            console.log(`🗑️ 중복 데이터 정리: ${item.ticker} (${item.id})`)
+            await supabase.from('trading_list').delete().eq('id', item.id)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('cleanupDuplicates 오류:', err)
+    }
+  }
+
   return {
     // 트레이딩 목록
     fetchTradingList,
@@ -441,6 +485,7 @@ export function useTradingHook() {
     updateHistory,
     buyStock,
     sellStock,
+    cleanupDuplicates,
     loading,
     error,
   }
