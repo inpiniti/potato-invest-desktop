@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import type { Daily } from '@/types/daily'
 import type { Minute } from '@/types/minute'
 import { useAccountStore } from '@/stores/useAccountStore'
@@ -35,7 +36,7 @@ export function useKoreainvestmentHook() {
         throw new Error('선택된 계정이 없습니다. 계정을 선택해주세요.')
       }
 
-      const { appkey, appsecret, cano } = selectedAccount
+      const { appkey, appsecret } = selectedAccount
 
       // IPC를 통해 메인 프로세스에서 API 호출
       if (!window.ipcRenderer?.koreaInvestApproval) {
@@ -49,15 +50,23 @@ export function useKoreainvestmentHook() {
 
       const approvalKey = response.approvalKey
 
-      // 스토어에 저장
-      setApprovalKey(cano, approvalKey)
+      // 스토어에 저장 (accessToken처럼 최상위 필드로 저장)
+      setApprovalKey(approvalKey)
 
-      console.log('✅ 웹소켓 토큰 발급 완료:', cano)
+      console.log('✅ 웹소켓 토큰 발급 완료')
+      
       return approvalKey
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
       setError(errorMessage)
       console.error('getWebSocketToken 오류:', err)
+      
+      // 사용자에게 오류 토스트 표시
+      toast.error('웹소켓 토큰 발급 실패', {
+        description: errorMessage,
+        duration: 5000,
+      })
+      
       throw err
     } finally {
       setLoading(false)

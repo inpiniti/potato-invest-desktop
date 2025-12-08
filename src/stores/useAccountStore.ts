@@ -7,6 +7,9 @@ interface AccountState {
   // 액세스 토큰
   accessToken: string | null
   
+  // 웹소켓 접근 토큰 (approval_key)
+  approvalKey: string | null
+  
   // 선택된 계좌
   selectedAccount: Account | null
   
@@ -16,6 +19,9 @@ interface AccountState {
   // 액세스 토큰 설정
   setAccessToken: (token: string) => void
   
+  // 웹소켓 접근 토큰 설정
+  setApprovalKey: (approvalKey: string) => void
+  
   // 계좌 추가
   addAccount: (account: Account) => void
   
@@ -24,9 +30,6 @@ interface AccountState {
   
   // 계좌 선택
   selectAccount: (cano: string) => void
-  
-  // 웹소켓 접근 토큰 설정 (계좌별)
-  setApprovalKey: (cano: string, approvalKey: string) => void
   
   // 모든 데이터 초기화 (로그아웃 시)
   reset: () => void
@@ -38,12 +41,18 @@ export const useAccountStore = create<AccountState>()(
     (set) => ({
       // 초기 상태
       accessToken: null,
+      approvalKey: null,
       selectedAccount: null,
       accounts: [],
       
       // 액세스 토큰 설정
       setAccessToken: (token) => {
         set({ accessToken: token })
+      },
+      
+      // 웹소켓 접근 토큰 설정
+      setApprovalKey: (approvalKey) => {
+        set({ approvalKey })
       },
       
       // 계좌 추가
@@ -99,32 +108,11 @@ export const useAccountStore = create<AccountState>()(
         })
       },
       
-      // 웹소켓 접근 토큰 설정 (계좌별)
-      setApprovalKey: (cano, approvalKey) => {
-        set((state) => {
-          // 계좌 목록에서 해당 계좌 찾아서 approvalKey 업데이트
-          const newAccounts = state.accounts.map(acc => 
-            acc.cano === cano 
-              ? { ...acc, approvalKey }
-              : acc
-          )
-          
-          // 선택된 계좌도 업데이트
-          const newSelectedAccount = state.selectedAccount?.cano === cano
-            ? { ...state.selectedAccount, approvalKey }
-            : state.selectedAccount
-          
-          return {
-            accounts: newAccounts,
-            selectedAccount: newSelectedAccount
-          }
-        })
-      },
-      
       // 모든 데이터 초기화
       reset: () => {
         set({
           accessToken: null,
+          approvalKey: null,
           selectedAccount: null,
           accounts: []
         })

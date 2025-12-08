@@ -157,6 +157,39 @@ if (!gotTheLock) {
       throw error;
     }
   });
+  ipcMain.handle("korea-invest-approval", async (_, { appkey, appsecret }) => {
+    try {
+      console.log("[Approval] 웹소켓 토큰 발급 요청...");
+      const requestBody = {
+        grant_type: "client_credentials",
+        appkey,
+        secretkey: appsecret
+        // API 스펙에 따라 'secretkey' 사용
+      };
+      console.log("[Approval] Request body:", JSON.stringify(requestBody, null, 2));
+      const response = await fetch("https://openapi.koreainvestment.com:9443/oauth2/Approval", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=UTF-8"
+        },
+        body: JSON.stringify(requestBody)
+      });
+      console.log("[Approval] Response status:", response.status, response.statusText);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[Approval] Error response:", errorText);
+        throw new Error(`웹소켓 토큰 발급 실패: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      const data = await response.json();
+      console.log("[Approval] Success:", data);
+      return {
+        approvalKey: data.approval_key
+      };
+    } catch (error) {
+      console.error("한투 웹소켓 토큰 발급 에러:", error);
+      throw error;
+    }
+  });
   ipcMain.handle("korea-invest-balance", async (_, { accessToken, appkey, appsecret, cano, acntPrdtCd }) => {
     try {
       const CANO = cano.substring(0, 8);

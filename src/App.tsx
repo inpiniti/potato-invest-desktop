@@ -3,6 +3,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { MainContent } from "@/components/main-content"
 import { RightPanel } from "@/components/right-panel"
+import { Toaster } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { useSettingStore } from "@/stores/useSettingStore"
@@ -73,29 +74,60 @@ export default function App() {
     }
   }, [kakaoToken])
 
-  // 앱 시작 시 토큰이 있으면 자동 잔고 조회
+  // 앱 시작 시 토큰이 있으면 자동 잔고 조회 및 웹소켓 토큰 발급
   useEffect(() => {
-    const fetchBalance = async () => {
-      if (accessToken && selectedAccount && window.ipcRenderer?.koreaInvestBalance) {
-        try {
-          console.log('앱 시작 시 잔고 자동 조회...')
-          const balanceResult = await window.ipcRenderer.koreaInvestBalance({
-            accessToken,
-            appkey: selectedAccount.appkey,
-            appsecret: selectedAccount.appsecret,
-            cano: selectedAccount.cano,
-          })
-          
-          console.log('잔고 조회 성공:', balanceResult)
-          setHoldings(balanceResult.holdings)
-          setBalance(balanceResult.balance)
-        } catch (error) {
-          console.error('자동 잔고 조회 실패:', error)
+    const initializeAccount = async () => {
+      if (accessToken && selectedAccount) {
+        // 1. 웹소켓 토큰 발급
+        if (window.ipcRenderer?.koreaInvestApproval) {
+          try {
+            console.log('앱 시작 시 웹소켓 토큰 자동 발급...')
+            
+            const approvalResult = await window.ipcRenderer.koreaInvestApproval({
+              appkey: selectedAccount.appkey,
+              appsecret: selectedAccount.appsecret,
+            })
+            
+            console.log('✅ 웹소켓 토큰 발급 성공:', approvalResult.approvalKey)
+            
+            // useAccountStore에 저장
+            const { setApprovalKey } = useAccountStore.getState()
+            setApprovalKey(approvalResult.approvalKey)
+          } catch (error: any) {
+            console.error('⚠️ 웹소켓 토큰 발급 실패 (계속 진행):', error)
+            const { toast } = await import('sonner')
+            toast.error('웹소켓 토큰 발급 실패', {
+              description: error.message || '알 수 없는 오류'
+            })
+          }
+        }
+        
+        // 2. 잔고 조회
+        if (window.ipcRenderer?.koreaInvestBalance) {
+          try {
+            console.log('앱 시작 시 잔고 자동 조회...')
+            const balanceResult = await window.ipcRenderer.koreaInvestBalance({
+              accessToken,
+              appkey: selectedAccount.appkey,
+              appsecret: selectedAccount.appsecret,
+              cano: selectedAccount.cano,
+            })
+            
+            console.log('✅ 잔고 조회 성공:', balanceResult)
+            setHoldings(balanceResult.holdings)
+            setBalance(balanceResult.balance)
+          } catch (error: any) {
+            console.error('❌ 자동 잔고 조회 실패:', error)
+            const { toast } = await import('sonner')
+            toast.error('잔고 조회 실패', {
+              description: error.message || '알 수 없는 오류'
+            })
+          }
         }
       }
     }
 
-    fetchBalance()
+    initializeAccount()
   }, []) // 앱 시작 시 한 번만 실행
 
   // 앱 시작 시 S&P 500 크롤링
@@ -169,6 +201,7 @@ export default function App() {
         } as React.CSSProperties
       }
     >
+      <Toaster position="top-right" richColors />
       <div className="flex h-screen w-full">
         {/* 좌측: 사이드바 */}
         <AppSidebar />

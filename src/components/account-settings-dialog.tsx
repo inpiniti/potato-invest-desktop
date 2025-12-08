@@ -52,13 +52,14 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
     setIsAuthenticating(true)
     try {
       // 한투 API 인증
-      if (window.ipcRenderer?.koreaInvestAuth && window.ipcRenderer?.koreaInvestBalance) {
+      if (window.ipcRenderer?.koreaInvestAuth && window.ipcRenderer?.koreaInvestBalance && window.ipcRenderer?.koreaInvestApproval) {
+        // 1. 액세스 토큰 발급
         const authResult = await window.ipcRenderer.koreaInvestAuth({
           appkey: account.appkey,
           appsecret: account.appsecret,
         })
         
-        console.log('한투 인증 성공:', authResult)
+        console.log('✅ 한투 인증 성공:', authResult)
         
         // 액세스 토큰 저장
         setAccessToken(authResult.accessToken)
@@ -66,7 +67,25 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
         // 계좌 선택
         selectAccount(account.cano)
         
-        // 잔고 조회
+        // 2. 웹소켓 접근 토큰 발급
+        try {
+          const approvalResult = await window.ipcRenderer.koreaInvestApproval({
+            appkey: account.appkey,
+            appsecret: account.appsecret,
+          })
+          
+          console.log('✅ 웹소켓 토큰 발급 성공:', approvalResult.approvalKey)
+          
+          // useAccountStore에 저장 (동적 import)
+          const { useAccountStore } = await import('@/stores/useAccountStore')
+          const { setApprovalKey } = useAccountStore.getState()
+          setApprovalKey(approvalResult.approvalKey)
+        } catch (approvalError: any) {
+          console.error('⚠️ 웹소켓 토큰 발급 실패 (계속 진행):', approvalError)
+          // 웹소켓 토큰 발급 실패해도 계속 진행
+        }
+        
+        // 3. 잔고 조회
         console.log('잔고 조회 시작...')
         const balanceResult = await window.ipcRenderer.koreaInvestBalance({
           accessToken: authResult.accessToken,
@@ -75,7 +94,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
           cano: account.cano,
         })
         
-        console.log('잔고 조회 성공:', balanceResult)
+        console.log('✅ 잔고 조회 성공:', balanceResult)
         
         // useBalanceStore에 저장 (동적 import)
         const { useBalanceStore } = await import('@/stores/useBalanceStore')
@@ -87,7 +106,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
         throw new Error('인증 기능을 사용할 수 없습니다')
       }
     } catch (error: any) {
-      console.error('계좌 선택 실패:', error)
+      console.error('❌ 계좌 선택 실패:', error)
       alert(`계좌 선택 실패: ${error.message || error}`)
     } finally {
       setIsAuthenticating(false)

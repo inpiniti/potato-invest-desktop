@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   oauthLogin: (loginUrl) => ipcRenderer.invoke("oauth-login", loginUrl),
   koreaInvestAuth: (credentials) => ipcRenderer.invoke("korea-invest-auth", credentials),
+  koreaInvestApproval: (credentials) => ipcRenderer.invoke("korea-invest-approval", credentials),
   koreaInvestBalance: (params) => ipcRenderer.invoke("korea-invest-balance", params),
   koreaInvestDaily: (params) => ipcRenderer.invoke("korea-invest-daily", params),
   koreaInvestMinutes: (params) => ipcRenderer.invoke("korea-invest-minutes", params),
