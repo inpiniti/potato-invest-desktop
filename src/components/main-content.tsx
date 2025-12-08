@@ -26,7 +26,8 @@ export function MainContent() {
     addTradingItem, 
     removeTradingItem, 
     buyStock, 
-    sellStock 
+    sellStock,
+    error: tradingError 
   } = useTradingHook()
 
   // Dialog 상태 관리
@@ -72,8 +73,13 @@ export function MainContent() {
         '트레이딩 목록에 추가',
         `${ticker}를 트레이딩 목록에 추가하시겠습니까?`,
         async () => {
-          await addTradingItem(ticker, info?.name || ticker)
+          const result = await addTradingItem(ticker, info?.name || ticker)
           setDialogOpen(false)
+          
+          // 중복 체크 실패 시 알림
+          if (!result && tradingError) {
+            alert(`⚠️ ${tradingError}`)
+          }
         }
       )
     }

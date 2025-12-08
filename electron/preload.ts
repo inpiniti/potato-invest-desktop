@@ -55,6 +55,12 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     tradingViewCrawl: (ticker: string) => ipcRenderer.invoke('tradingview-crawl', { ticker }),
     newsCrawl: (ticker: string) => ipcRenderer.invoke('news-crawl', { ticker }),
 
+    // Realtime API
+    realtimeSubscribe: (params: { ticker: string; exchange: 'NAS' | 'NYS' }) => 
+        ipcRenderer.invoke('realtime-subscribe', params),
+    realtimeUnsubscribe: (params: { ticker: string; exchange: 'NAS' | 'NYS' }) => 
+        ipcRenderer.invoke('realtime-unsubscribe', params),
+
     // You can expose other APTs you need here.
     // ...
 })

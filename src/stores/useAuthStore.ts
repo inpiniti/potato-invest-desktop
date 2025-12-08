@@ -3,7 +3,9 @@ import { persist } from 'zustand/middleware'
 
 // 인증 상태 타입 정의
 interface AuthState {
-  // 카카오 토큰
+  // Supabase 사용자 고유 ID (UUID, 절대 변하지 않음)
+  userId: string | null
+  // 카카오 토큰 (JWT, 로그인할 때마다 변경됨 - 로그인 상태 확인용)
   kakaoToken: string | null
   // 사용자 이메일
   email: string | null
@@ -17,6 +19,7 @@ interface AuthState {
   
   // 로그인 처리
   login: (data: {
+    userId: string
     kakaoToken: string
     email: string
     thumbnailUrl: string
@@ -32,6 +35,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       // 초기 상태
+      userId: null,
       kakaoToken: null,
       email: null,
       thumbnailUrl: null,
@@ -40,12 +44,18 @@ export const useAuthStore = create<AuthState>()(
       // 로그인 여부 확인
       isLoggedIn: () => {
         const state = get()
-        return !!state.email // 이메일만 있으면 로그인된 것으로 간주
+        return !!state.userId && !!state.email // userId와 이메일이 있으면 로그인된 것으로 간주
       },
       
       // 로그인 처리
       login: (data) => {
+        console.log('🔐 로그인 처리:', {
+          userId: data.userId,
+          email: data.email,
+          name: data.name,
+        })
         set({
+          userId: data.userId,
           kakaoToken: data.kakaoToken,
           email: data.email,
           thumbnailUrl: data.thumbnailUrl,
@@ -56,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
       // 로그아웃 처리
       logout: () => {
         set({
+          userId: null,
           kakaoToken: null,
           email: null,
           thumbnailUrl: null,

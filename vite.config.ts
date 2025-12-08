@@ -16,6 +16,13 @@ export default defineConfig({
       {
         // Main-Process entry file of the Electron App.
         entry: 'electron/main.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['ws', 'bufferutil', 'utf-8-validate']
+            }
+          }
+        }
       },
       {
         entry: 'electron/preload.ts',

@@ -69,6 +69,16 @@ declare global {
       } | null>
 
       newsCrawl: (ticker: string) => Promise<any[]>
+
+      // Realtime API
+      realtimeSubscribe: (params: { ticker: string; exchange: 'NAS' | 'NYS' }) => Promise<{
+        success: boolean
+        trKey: string
+      }>
+      realtimeUnsubscribe: (params: { ticker: string; exchange: 'NAS' | 'NYS' }) => Promise<{
+        success: boolean
+        trKey: string
+      }>
     }
   }
 }

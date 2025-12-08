@@ -28,7 +28,10 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   // Crawling API
   tossCrawl: (ticker) => ipcRenderer.invoke("toss-crawl", { ticker }),
   tradingViewCrawl: (ticker) => ipcRenderer.invoke("tradingview-crawl", { ticker }),
-  newsCrawl: (ticker) => ipcRenderer.invoke("news-crawl", { ticker })
+  newsCrawl: (ticker) => ipcRenderer.invoke("news-crawl", { ticker }),
+  // Realtime API
+  realtimeSubscribe: (params) => ipcRenderer.invoke("realtime-subscribe", params),
+  realtimeUnsubscribe: (params) => ipcRenderer.invoke("realtime-unsubscribe", params)
   // You can expose other APTs you need here.
   // ...
 });

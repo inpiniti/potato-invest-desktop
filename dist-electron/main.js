@@ -1,6 +1,104 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import WebSocket from "ws";
+let realtimeWs = null;
+let approvalKey = null;
+const subscribedStocks = /* @__PURE__ */ new Set();
+let mainWindow = null;
+function setMainWindow(win2) {
+  mainWindow = win2;
+}
+function setApprovalKey(key) {
+  approvalKey = key;
+  initializeWebSocket();
+}
+function initializeWebSocket() {
+  if (!approvalKey) {
+    console.error("[WebSocket] approval_key가 없습니다.");
+    return;
+  }
+  if (realtimeWs) {
+    realtimeWs.close();
+    realtimeWs = null;
+  }
+  console.log("[WebSocket] 연결 시작...");
+  realtimeWs = new WebSocket("ws://ops.koreainvestment.com:21000/tryitout/HDFSCNT0");
+  realtimeWs.on("open", () => {
+    console.log("[WebSocket] 연결 성공");
+    subscribedStocks.forEach((trKey) => {
+      sendSubscription(trKey, "1");
+    });
+  });
+  realtimeWs.on("message", (data) => {
+    try {
+      const message = data.toString("utf-8");
+      const parsed = JSON.parse(message);
+      console.log("[WebSocket] 수신:", parsed);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("realtime-price", parsed);
+      }
+    } catch (error) {
+      console.error("[WebSocket] 메시지 파싱 오류:", error);
+    }
+  });
+  realtimeWs.on("error", (error) => {
+    console.error("[WebSocket] 오류:", error);
+  });
+  realtimeWs.on("close", () => {
+    console.log("[WebSocket] 연결 종료");
+    realtimeWs = null;
+    setTimeout(() => {
+      if (approvalKey) {
+        console.log("[WebSocket] 재연결 시도...");
+        initializeWebSocket();
+      }
+    }, 5e3);
+  });
+}
+function sendSubscription(trKey, trType) {
+  if (!realtimeWs || realtimeWs.readyState !== WebSocket.OPEN) {
+    console.error("[WebSocket] 연결되지 않음");
+    return;
+  }
+  if (!approvalKey) {
+    console.error("[WebSocket] approval_key가 없습니다.");
+    return;
+  }
+  const message = JSON.stringify({
+    header: {
+      approval_key: approvalKey,
+      custtype: "P",
+      tr_type: trType,
+      "content-type": "utf-8"
+    },
+    body: {
+      input: {
+        tr_id: "HDFSCNT0",
+        tr_key: trKey
+      }
+    }
+  });
+  console.log(`[WebSocket] ${trType === "1" ? "구독" : "해제"} 전송:`, trKey);
+  console.log("[WebSocket] 메시지:", message);
+  realtimeWs.send(message);
+}
+function subscribe(ticker, exchange) {
+  const marketCode = exchange === "NAS" ? "NAS" : "NYS";
+  const trKey = `D${marketCode}${ticker}`;
+  console.log("[Subscribe] 구독 요청:", trKey);
+  subscribedStocks.add(trKey);
+  sendSubscription(trKey, "1");
+  return { success: true, trKey };
+}
+function unsubscribe(ticker, exchange) {
+  const marketCode = exchange === "NAS" ? "NAS" : "NYS";
+  const trKey = `D${marketCode}${ticker}`;
+  console.log("[Unsubscribe] 구독 취소 요청:", trKey);
+  subscribedStocks.delete(trKey);
+  sendSubscription(trKey, "2");
+  return { success: true, trKey };
+}
 const __filename$1 = fileURLToPath(import.meta.url);
 const __dirname$1 = path.dirname(__filename$1);
 process.env.DIST = path.join(__dirname$1, "../dist");
@@ -31,6 +129,7 @@ function createWindow() {
     win.loadFile(path.join(process.env.DIST || "", "index.html"));
   }
   win.maximize();
+  setMainWindow(win);
 }
 try {
   if (process.defaultApp) {
@@ -182,6 +281,7 @@ if (!gotTheLock) {
       }
       const data = await response.json();
       console.log("[Approval] Success:", data);
+      setApprovalKey(data.approval_key);
       return {
         approvalKey: data.approval_key
       };
@@ -817,3 +917,19 @@ if (!gotTheLock) {
   });
   app.whenReady().then(createWindow);
 }
+ipcMain.handle("realtime-subscribe", async (_, { ticker, exchange }) => {
+  try {
+    return subscribe(ticker, exchange);
+  } catch (error) {
+    console.error("[Subscribe] 오류:", error);
+    throw error;
+  }
+});
+ipcMain.handle("realtime-unsubscribe", async (_, { ticker, exchange }) => {
+  try {
+    return unsubscribe(ticker, exchange);
+  } catch (error) {
+    console.error("[Unsubscribe] 오류:", error);
+    throw error;
+  }
+});

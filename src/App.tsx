@@ -11,14 +11,16 @@ import { useAccountStore } from "@/stores/useAccountStore"
 import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { useTradingHook } from "@/hooks/useTradingHook"
+import { useRealtimePrice } from "@/hooks/useRealtimePrice"
 
 export default function App() {
-  const { login, logout, kakaoToken } = useAuthStore()
+  const { login, logout, userId } = useAuthStore() // kakaoToken 대신 userId 사용
   const { darkMode } = useSettingStore()
   const { accessToken, selectedAccount } = useAccountStore()
   const { setHoldings, setBalance } = useBalanceStore()
   const { setSP500 } = useSP500Store()
-  const { fetchTradingList, fetchHistories } = useTradingHook()
+  const { fetchTradingList, fetchHistories, cleanupDuplicates } = useTradingHook()
+  const { subscribe } = useRealtimePrice()
 
   // 다크모드 초기화
   useEffect(() => {
@@ -34,6 +36,7 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         login({
+          userId: session.user.id, // Supabase 사용자 고유 ID (UUID)
           kakaoToken: session.provider_token || session.access_token, // 카카오 토큰 또는 세션 토큰
           email: session.user.email || '',
           thumbnailUrl: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
@@ -50,6 +53,7 @@ export default function App() {
       
       if (session?.user) {
         const userData = {
+          userId: session.user.id, // Supabase 사용자 고유 ID (UUID)
           kakaoToken: session.provider_token || session.access_token,
           email: session.user.email || '',
           thumbnailUrl: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
@@ -65,14 +69,43 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [login, logout])
 
-  // 로그인 시 트레이딩 데이터 자동 로드
+  // 로그인 시 트레이딩 데이터 자동 로드 및 실시간 구독
   useEffect(() => {
-    if (kakaoToken) {
-      console.log('로그인 감지 - 트레이딩 데이터 로드 시작...')
-      fetchTradingList()
-      fetchHistories()
+    const loadAndSubscribe = async () => {
+      if (userId) {
+        console.log('로그인 감지 - 트레이딩 데이터 로드 시작...')
+        
+        // 중복 데이터 정리
+        await cleanupDuplicates()
+        
+        // 트레이딩 목록 로드
+        const tradingList = await fetchTradingList()
+        console.log('📋 트레이딩 목록 로드 완료:', tradingList)
+        
+        await fetchHistories()
+        
+        // 트레이딩 목록의 모든 종목 실시간 구독
+        if (tradingList && tradingList.length > 0) {
+          console.log(`📡 실시간 시세 구독 시작: ${tradingList.length}개 종목`)
+          
+          for (const item of tradingList) {
+            try {
+              // 거래소 정보는 S&P 500 store에서 가져오거나 기본값 사용
+              // 일단 기본값으로 NAS 사용 (추후 개선 가능)
+              await subscribe(item.ticker, 'NAS')
+            } catch (error) {
+              console.error(`실시간 구독 실패: ${item.ticker}`, error)
+            }
+          }
+        } else {
+          console.log('📋 트레이딩 목록이 비어있습니다.')
+        }
+      }
     }
-  }, [kakaoToken])
+    
+    loadAndSubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   // 앱 시작 시 토큰이 있으면 자동 잔고 조회 및 웹소켓 토큰 발급
   useEffect(() => {

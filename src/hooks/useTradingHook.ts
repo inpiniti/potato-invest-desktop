@@ -17,7 +17,7 @@ export function useTradingHook() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { setHistories, setTradings } = useTradingStore()
-  const { kakaoToken } = useAuthStore()
+  const { userId } = useAuthStore()
 
   /**
    * DB 레코드를 앱 타입으로 변환 (snake_case -> camelCase)
@@ -73,14 +73,14 @@ export function useTradingHook() {
     setError(null)
 
     try {
-      if (!kakaoToken) {
+      if (!userId) {
         throw new Error('로그인이 필요합니다.')
       }
 
       const { data, error: fetchError } = await supabase
         .from('trading_list')
         .select('*')
-        .eq('uid', kakaoToken)
+        .eq('uid', userId)
         .order('added_at', { ascending: false })
 
       if (fetchError) {
@@ -108,15 +108,15 @@ export function useTradingHook() {
     setError(null)
 
     try {
-      if (!kakaoToken) {
+      if (!userId) {
         throw new Error('로그인이 필요합니다.')
       }
 
-      const id = `${ticker}_${kakaoToken}`
+      const id = `${ticker}_${userId}`
 
       const recordToInsert = {
         id,
-        uid: kakaoToken,
+        uid: userId,
         ticker,
         name,
         added_at: new Date().toISOString(),
@@ -158,11 +158,11 @@ export function useTradingHook() {
     setError(null)
 
     try {
-      if (!kakaoToken) {
+      if (!userId) {
         throw new Error('로그인이 필요합니다.')
       }
 
-      const id = `${ticker}_${kakaoToken}`
+      const id = `${ticker}_${userId}`
 
       console.log('🗑️ 트레이딩 목록 삭제:', id)
 
@@ -170,7 +170,7 @@ export function useTradingHook() {
         .from('trading_list')
         .delete()
         .eq('id', id)
-        .eq('uid', kakaoToken)
+        .eq('uid', userId)
 
       if (deleteError) {
         console.error('❌ 트레이딩 목록 삭제 에러:', deleteError)
@@ -206,14 +206,14 @@ export function useTradingHook() {
     setError(null)
 
     try {
-      if (!kakaoToken) {
+      if (!userId) {
         throw new Error('로그인이 필요합니다.')
       }
 
       const { data, error: fetchError } = await supabase
         .from('trading')
         .select('*')
-        .eq('uid', kakaoToken)
+        .eq('uid', userId)
         .order('buy_time', { ascending: false })
 
       if (fetchError) {
@@ -244,7 +244,7 @@ export function useTradingHook() {
 
     try {
       if (!kakaoToken) {
-        const msg = '로그인이 필요합니다. kakaoToken이 없습니다.'
+        const msg = '로그인이 필요합니다. userId가 없습니다.'
         alert(msg)
         throw new Error(msg)
       }
@@ -253,7 +253,7 @@ export function useTradingHook() {
 
       const recordToInsert = {
         id,
-        ...mapHistoryToRecord({ ...history, uid: kakaoToken }),
+        ...mapHistoryToRecord({ ...history, uid: userId }),
       }
 
       console.log('📤 Supabase INSERT 시도:', recordToInsert)
@@ -297,7 +297,7 @@ export function useTradingHook() {
     setError(null)
 
     try {
-      if (!kakaoToken) {
+      if (!userId) {
         throw new Error('로그인이 필요합니다.')
       }
 
@@ -314,7 +314,7 @@ export function useTradingHook() {
         .from('trading')
         .update(recordUpdates)
         .eq('id', id)
-        .eq('uid', kakaoToken)
+        .eq('uid', userId)
         .select()
         .single()
 
@@ -341,14 +341,14 @@ export function useTradingHook() {
    */
   const buyStock = async (ticker: string): Promise<TradingHistory | null> => {
     try {
-      if (!kakaoToken) {
+      if (!userId) {
         throw new Error('로그인이 필요합니다.')
       }
 
       const { data, error: fetchError } = await supabase
         .from('trading')
         .select('id', { count: 'exact', head: false })
-        .eq('uid', kakaoToken)
+        .eq('uid', userId)
         .eq('ticker', ticker)
         .is('sell_price', null)
 
@@ -387,14 +387,14 @@ export function useTradingHook() {
     setError(null)
 
     try {
-      if (!kakaoToken) {
+      if (!userId) {
         throw new Error('로그인이 필요합니다.')
       }
 
       const { data, error: fetchError } = await supabase
         .from('trading')
         .select('*')
-        .eq('uid', kakaoToken)
+        .eq('uid', userId)
         .eq('ticker', ticker)
         .is('sell_price', null)
         .order('buy_time', { ascending: false })
