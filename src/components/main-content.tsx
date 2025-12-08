@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStockStore } from '@/stores/useStockStore'
 import { useTradingStore } from '@/stores/useTradingStore'
 import { useTradingHook } from '@/hooks/useTradingHook'
+import { useTrendHook } from '@/hooks/useTrendHook'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, X, ShoppingCart, DollarSign, ChevronDown, ChevronUp } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, X, ShoppingCart, DollarSign, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,21 +20,175 @@ import {
 } from '@/components/ui/alert-dialog'
 import TradingViewWidgetChart from '@/components/TradingViewWidgetChart'
 import { useRealtimePrice } from '@/hooks/useRealtimePrice'
+import type { Trend, TrendType } from '@/types/trend'
+import { toast } from 'sonner'
 
-const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick }: { 
+// 추세 타입에 따른 색상 및 아이콘 반환
+const getTrendStyle = (trend: TrendType) => {
+  switch (trend) {
+    case '상승':
+    case '상승전환':
+      return { color: 'text-red-400', icon: TrendingUp, label: trend }
+    case '하락':
+    case '하락전환':
+      return { color: 'text-blue-400', icon: TrendingDown, label: trend }
+    default:
+      return { color: 'text-gray-400', icon: Minus, label: trend }
+  }
+}
+
+const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick, onAutoTrade }: { 
   trading: any, 
-  handleBuy: (ticker: string) => void, 
-  handleSell: (ticker: string) => void, 
-  handleRemoveClick: (ticker: string, name: string) => void 
+  handleBuy: (ticker: string, price: number) => void, 
+  handleSell: (ticker: string, price: number) => void, 
+  handleRemoveClick: (ticker: string, name: string) => void,
+  onAutoTrade: (ticker: string, price: number, type: 'buy' | 'sell') => void
 }) => {
   const { getRealtimeData } = useRealtimePrice()
+  const { getTrendMinutes } = useTrendHook()
+  const { getHistoriesByTicker } = useTradingStore()
+  const [trend, setTrend] = useState<Trend | null>(null)
+  const [prevTrend, setPrevTrend] = useState<Trend | null>(null) // 이전 추세 저장
+  const [trendLoading, setTrendLoading] = useState(false)
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0)
+  const [lastAutoTradeTime, setLastAutoTradeTime] = useState<number>(0)
+  const [autoTradeStatus, setAutoTradeStatus] = useState<'idle' | 'buying' | 'selling'>('idle')
+
   const realtimeData = getRealtimeData(trading.ticker)
   const currentPrice = realtimeData ? parseFloat(realtimeData.LAST) : null
   const changeRate = realtimeData ? parseFloat(realtimeData.RATE) : null
   const changeDiff = realtimeData ? parseFloat(realtimeData.DIFF) : null
 
+  // 해당 종목의 트레이딩 내역
+  const histories = getHistoriesByTicker(trading.ticker)
+  
+  // 미체결 포지션 개수 (매수했지만 아직 매도하지 않은 것)
+  const openPositions = histories.filter(h => h.sellPrice === null)
+
+  // 자동 매수 조건 체크
+  const checkBuyCondition = (t: Trend): boolean => {
+    // MA20은 반드시 '상승전환'이어야 함
+    if (t.ma20 !== '상승전환') return false
+    
+    // MA50, MA100, MA200은 '상승' 또는 '상승전환'이어야 함
+    const isUpTrend = (ma: string) => ma === '상승' || ma === '상승전환'
+    return isUpTrend(t.ma50) && isUpTrend(t.ma100) && isUpTrend(t.ma200)
+  }
+
+  // 자동 매도 조건 체크
+  const checkSellCondition = (t: Trend): boolean => {
+    // 4개 중 하나라도 '하락' 또는 '하락전환'이면 매도
+    const isDownTrend = (ma: string) => ma === '하락' || ma === '하락전환'
+    return isDownTrend(t.ma20) || isDownTrend(t.ma50) || isDownTrend(t.ma100) || isDownTrend(t.ma200)
+  }
+
+  // 추세 변화 감지
+  const hasTrendChanged = (prev: Trend | null, curr: Trend): boolean => {
+    if (!prev) return true // 첫 번째 추세는 변화로 간주
+    return prev.ma20 !== curr.ma20 || prev.ma50 !== curr.ma50 || 
+           prev.ma100 !== curr.ma100 || prev.ma200 !== curr.ma200
+  }
+
+  // 추세 데이터 조회 함수 (1분 쓰로틀링 적용)
+  const fetchTrend = async (force: boolean = false) => {
+    const now = Date.now()
+    const timeSinceLastFetch = now - lastFetchTime
+    const ONE_MINUTE = 60 * 1000
+
+    // 강제가 아니고 1분이 지나지 않았으면 스킵
+    if (!force && timeSinceLastFetch < ONE_MINUTE) {
+      return
+    }
+
+    setTrendLoading(true)
+    try {
+      const trendData = await getTrendMinutes({
+        ticker: trading.ticker,
+        exchange: 'NAS' // 기본값 NAS
+      })
+      
+      // 이전 추세 저장 후 현재 추세 업데이트
+      setPrevTrend(trend)
+      setTrend(trendData)
+      setLastFetchTime(now)
+    } catch (err) {
+      console.error(`${trading.ticker} 추세 조회 실패:`, err)
+    } finally {
+      setTrendLoading(false)
+    }
+  }
+
+  // 컴포넌트 마운트 시 즉시 조회 (트레이딩 추가 시)
+  useEffect(() => {
+    fetchTrend(true) // force=true로 즉시 조회
+  }, [trading.ticker])
+
+  // 실시간 데이터 수신 시 1분 간격으로 조회
+  useEffect(() => {
+    if (realtimeData) {
+      fetchTrend(false) // 쓰로틀링 적용
+    }
+  }, [realtimeData])
+
+  // 자동 트레이딩 로직
+  useEffect(() => {
+    // 조건: 추세 데이터 있고, 가격 있고, 자동 트레이딩 중이 아닐 때
+    if (!trend || !currentPrice || currentPrice <= 0 || autoTradeStatus !== 'idle') {
+      return
+    }
+
+    // 추세 변화가 없으면 스킵
+    if (!hasTrendChanged(prevTrend, trend)) {
+      return
+    }
+
+    const now = Date.now()
+    const AUTO_TRADE_COOLDOWN = 60 * 1000 // 1분 쿨다운
+
+    // 마지막 자동 거래 후 1분이 지나지 않았으면 스킵
+    if (now - lastAutoTradeTime < AUTO_TRADE_COOLDOWN) {
+      return
+    }
+
+    // 매도 조건 먼저 체크 (보유 중일 때만)
+    if (openPositions.length > 0 && checkSellCondition(trend)) {
+      setAutoTradeStatus('selling')
+      console.log(`🤖 [자동매도] ${trading.ticker} - 하락 추세 변화 감지`)
+      onAutoTrade(trading.ticker, currentPrice, 'sell')
+      setLastAutoTradeTime(now)
+      setTimeout(() => setAutoTradeStatus('idle'), 5000) // 5초 후 상태 초기화
+      return
+    }
+
+    // 매수 조건 체크
+    if (checkBuyCondition(trend)) {
+      setAutoTradeStatus('buying')
+      console.log(`🤖 [자동매수] ${trading.ticker} - 상승전환 변화 감지 (MA20: ${trend.ma20})`)
+      onAutoTrade(trading.ticker, currentPrice, 'buy')
+      setLastAutoTradeTime(now)
+      setTimeout(() => setAutoTradeStatus('idle'), 5000) // 5초 후 상태 초기화
+    }
+  }, [trend, currentPrice, openPositions.length])
+
+  // 매수/매도 버튼 클릭 핸들러
+  const onBuyClick = () => {
+    if (currentPrice && currentPrice > 0) {
+      handleBuy(trading.ticker, currentPrice)
+    } else {
+      alert('실시간 가격을 받아오지 못했습니다. 잠시 후 다시 시도해주세요.')
+    }
+  }
+
+  const onSellClick = () => {
+    if (currentPrice && currentPrice > 0) {
+      handleSell(trading.ticker, currentPrice)
+    } else {
+      alert('실시간 가격을 받아오지 못했습니다. 잠시 후 다시 시도해주세요.')
+    }
+  }
+
   return (
-    <Card key={trading.ticker} className="h-40 w-full">
+    <Card key={trading.ticker} className="w-full">
       <CardHeader className="p-3 flex flex-row items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center justify-between">
@@ -57,8 +212,9 @@ const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick }: {
               <Button
                 size="sm"
                 variant="default"
-                onClick={() => handleBuy(trading.ticker)}
-                className="h-7 gap-1 bg-red-500 hover:bg-red-600"
+                onClick={onBuyClick}
+                disabled={!currentPrice}
+                className="h-7 gap-1 bg-red-500 hover:bg-red-600 disabled:opacity-50"
               >
                 <ShoppingCart className="h-3 w-3" />
                 <span className="text-xs">매수</span>
@@ -66,8 +222,9 @@ const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick }: {
               <Button
                 size="sm"
                 variant="default"
-                onClick={() => handleSell(trading.ticker)}
-                className="h-7 gap-1 bg-blue-500 hover:bg-blue-600"
+                onClick={onSellClick}
+                disabled={!currentPrice}
+                className="h-7 gap-1 bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
               >
                 <DollarSign className="h-3 w-3" />
                 <span className="text-xs">매도</span>
@@ -85,9 +242,84 @@ const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick }: {
         </div>
       </CardHeader>
       <CardContent className="p-3 pt-0">
-        <div className="text-xs text-muted-foreground">
-          추가일: {new Date(trading.addedAt).toLocaleDateString('ko-KR')}
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs text-muted-foreground">
+            추가일: {new Date(trading.addedAt).toLocaleDateString('ko-KR')}
+          </div>
+          {/* 추세 정보 표시 */}
+          <div className="flex items-center gap-2">
+            {trendLoading ? (
+              <span className="text-xs text-muted-foreground">추세 분석중...</span>
+            ) : trend ? (
+              <>
+                {(['ma20', 'ma50', 'ma100', 'ma200'] as const).map((maKey) => {
+                  const style = getTrendStyle(trend[maKey])
+                  const Icon = style.icon
+                  return (
+                    <div key={maKey} className={`flex items-center gap-0.5 ${style.color}`}>
+                      <Icon className="h-3 w-3" />
+                      <span className="text-[10px]">{maKey.toUpperCase().replace('MA', '')}</span>
+                    </div>
+                  )
+                })}
+              </>
+            ) : (
+              <span className="text-xs text-muted-foreground">-</span>
+            )}
+          </div>
         </div>
+        
+        {/* 트레이딩 내역 표 */}
+        {histories.length > 0 && (
+          <div className="mt-2 border rounded">
+            <table className="w-full text-[10px]">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="p-1 text-left">매수가</th>
+                  <th className="p-1 text-left">수량</th>
+                  <th className="p-1 text-left">매도가</th>
+                  <th className="p-1 text-right">손익</th>
+                </tr>
+              </thead>
+              <tbody>
+                {histories.slice(0, 5).map((h) => {
+                  const profit = h.sellPrice 
+                    ? (h.sellPrice - h.buyPrice) * h.buyQuantity 
+                    : currentPrice 
+                      ? (currentPrice - h.buyPrice) * h.buyQuantity 
+                      : null
+                  const profitRate = h.sellPrice 
+                    ? ((h.sellPrice - h.buyPrice) / h.buyPrice * 100)
+                    : currentPrice 
+                      ? ((currentPrice - h.buyPrice) / h.buyPrice * 100)
+                      : null
+                  
+                  return (
+                    <tr key={h.id} className="border-t">
+                      <td className="p-1">${h.buyPrice.toFixed(2)}</td>
+                      <td className="p-1">{h.buyQuantity}</td>
+                      <td className="p-1">
+                        {h.sellPrice ? `$${h.sellPrice.toFixed(2)}` : <span className="text-muted-foreground">-</span>}
+                      </td>
+                      <td className={`p-1 text-right ${profit && profit > 0 ? 'text-red-400' : profit && profit < 0 ? 'text-blue-400' : ''}`}>
+                        {profit !== null ? (
+                          <>
+                            ${profit.toFixed(2)} ({profitRate?.toFixed(1)}%)
+                          </>
+                        ) : '-'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            {histories.length > 5 && (
+              <div className="text-[10px] text-muted-foreground text-center py-1">
+                +{histories.length - 5}개 더 있음
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -171,21 +403,46 @@ export function MainContent() {
     )
   }
 
-  // 매수 핸들러
-  const handleBuy = async (tradingTicker: string) => {
-    const result = await buyStock(tradingTicker)
+  // 매수 핸들러 (수동)
+  const handleBuy = async (tradingTicker: string, price: number) => {
+    const result = await buyStock(tradingTicker, price)
     if (result) {
-      alert(`✅ 매수 완료!\n티커: ${tradingTicker}\n수량: ${result.buyQuantity}\n가격: $${result.buyPrice}`)
+      alert(`✅ 매수 완료!\n티커: ${tradingTicker}\n수량: ${result.buyQuantity}\n가격: $${result.buyPrice.toFixed(2)}`)
     } else {
       alert('❌ 매수 실패. 다시 시도해주세요.')
     }
   }
 
-  // 매도 핸들러
-  const handleSell = async (tradingTicker: string) => {
-    const result = await sellStock(tradingTicker)
+  // 매도 핸들러 (수동)
+  const handleSell = async (tradingTicker: string, price: number) => {
+    const result = await sellStock(tradingTicker, price)
     if (result) {
-      alert(`✅ 매도 완료!\n티커: ${tradingTicker}\n수량: ${result.sellQuantity}\n가격: $${result.sellPrice}`)
+      alert(`✅ 매도 완료!\n티커: ${tradingTicker}\n수량: ${result.sellQuantity}\n가격: $${result.sellPrice?.toFixed(2)}`)
+    }
+  }
+
+  // 자동 트레이딩 핸들러 (toast 사용)
+  const onAutoTrade = async (tradingTicker: string, price: number, type: 'buy' | 'sell') => {
+    if (type === 'buy') {
+      const result = await buyStock(tradingTicker, price)
+      if (result) {
+        toast.success(`🤖 자동 매수: ${tradingTicker}`, {
+          description: `수량: ${result.buyQuantity} / 가격: $${result.buyPrice.toFixed(2)}`,
+          duration: 5000,
+        })
+      } else {
+        toast.error(`자동 매수 실패: ${tradingTicker}`)
+      }
+    } else {
+      const result = await sellStock(tradingTicker, price)
+      if (result) {
+        toast.success(`🤖 자동 매도: ${tradingTicker}`, {
+          description: `수량: ${result.sellQuantity} / 가격: $${result.sellPrice?.toFixed(2)}`,
+          duration: 5000,
+        })
+      } else {
+        toast.error(`자동 매도 실패: ${tradingTicker}`)
+      }
     }
   }
 
@@ -486,6 +743,7 @@ export function MainContent() {
                         handleBuy={handleBuy}
                         handleSell={handleSell}
                         handleRemoveClick={handleRemoveClick}
+                        onAutoTrade={onAutoTrade}
                       />
                     ))}
                   </div>

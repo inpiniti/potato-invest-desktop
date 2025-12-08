@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Command, Wallet, Flag, Bug, Lightbulb, FileText, Info } from "lucide-react"
+import { Command, Wallet, Flag, Bug, Lightbulb, FileText, Info, ListChecks } from "lucide-react"
 
 import { NavUser } from "@/components/nav-user"
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge"
 import { useTrendStore } from "@/stores/useTrendStore"
 import { useStockHook } from "@/hooks/useStockHook"
 import { useStockStore } from "@/stores/useStockStore"
+import { useTradingStore } from "@/stores/useTradingStore"
 
 // This is sample data
 const data = {
@@ -144,12 +145,50 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // IRL you should use the url/router.
   const [activeItem, setActiveItem] = React.useState(data.navMain[0])
   const [mails, setMails] = React.useState(data.mails)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [recommendedOnly, setRecommendedOnly] = React.useState(false)
   const { setOpen } = useSidebar()
   const { holdings } = useBalanceStore()
   const { sp500 } = useSP500Store()
   const { getTrendByTicker } = useTrendStore()
   const { getInfo, getNews, getToss } = useStockHook()
   const { ticker: selectedTicker, setTicker } = useStockStore()
+  const { isInTrading } = useTradingStore()
+
+  // 검색어로 필터된 목록
+  const filteredSP500 = React.useMemo(() => {
+    let result = sp500
+
+    // 검색어 필터
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(stock => 
+        stock.ticker.toLowerCase().includes(query) ||
+        stock.name?.toLowerCase().includes(query)
+      )
+    }
+
+    // 추천 필터 (4개 MA 모두 상승 또는 상승전환)
+    if (recommendedOnly) {
+      result = result.filter(stock => {
+        const trend = getTrendByTicker(stock.ticker)
+        if (!trend) return false
+        const isUpTrend = (t: string) => t === '상승' || t === '상승전환'
+        return isUpTrend(trend.ma20) && isUpTrend(trend.ma50) && isUpTrend(trend.ma100) && isUpTrend(trend.ma200)
+      })
+    }
+
+    return result
+  }, [sp500, searchQuery, recommendedOnly, getTrendByTicker])
+
+  const filteredHoldings = React.useMemo(() => {
+    if (!searchQuery.trim()) return holdings
+    const query = searchQuery.toLowerCase()
+    return holdings.filter(holding => 
+      holding.pdno.toLowerCase().includes(query) ||
+      holding.prdt_name?.toLowerCase().includes(query)
+    )
+  }, [holdings, searchQuery])
 
   const formatCurrency = (value: string) => {
     const num = parseFloat(value)
@@ -326,31 +365,45 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {activeItem?.title}
             </div>
             {activeItem?.title === "S&P 500" && (
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={() => setTrendAnalysisOpen(true)}
-              >
-                트렌드 분석
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant={recommendedOnly ? "default" : "outline"}
+                  className={`h-7 text-xs ${recommendedOnly ? 'bg-red-500 hover:bg-red-600' : ''}`}
+                  onClick={() => setRecommendedOnly(!recommendedOnly)}
+                >
+                  추천
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => setTrendAnalysisOpen(true)}
+                >
+                  트렌드 분석
+                </Button>
+              </div>
             )}
           </div>
-          <SidebarInput placeholder="Type to search..." />
+          <SidebarInput 
+            placeholder="종목코드 또는 이름 검색..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup className="px-0">
             <SidebarGroupContent>
               {activeItem?.title === "보유종목" ? (
                 // 보유종목 표시
-                holdings.length === 0 ? (
+                filteredHoldings.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-6 text-center">
                     <p className="text-xs text-muted-foreground">
-                      보유종목이 없습니다
+                      {searchQuery ? '검색 결과가 없습니다' : '보유종목이 없습니다'}
                     </p>
                   </div>
                 ) : (
-                  holdings.map((holding) => (
+                  filteredHoldings.map((holding) => (
                     <a
                       href="#"
                       key={holding.pdno}
@@ -372,14 +425,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 )
               ) : activeItem?.title === "S&P 500" ? (
                 // S&P 500 종목 표시
-                sp500.length === 0 ? (
+                filteredSP500.length === 0 ? (
                   <div className="flex flex-col items-center justify-center p-6 text-center">
                     <p className="text-xs text-muted-foreground">
-                      S&P 500 데이터를 불러오는 중...
+                      {searchQuery ? '검색 결과가 없습니다' : 'S&P 500 데이터를 불러오는 중...'}
                     </p>
                   </div>
                 ) : (
-                  sp500.map((stock) => {
+                  filteredSP500.map((stock) => {
                     const trend = getTrendByTicker(stock.ticker)
                     
                     return (
@@ -396,6 +449,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       >
                         <div className="flex w-full items-center gap-2">
                           <span className="text-sm font-medium">{stock.ticker}</span>
+                          {isInTrading(stock.ticker) && (
+                            <ListChecks className="h-3.5 w-3.5 text-green-500" />
+                          )}
                           <span className="ml-auto text-xs text-muted-foreground">{stock.exchange}</span>
                         </div>
                         <div className="flex w-full gap-2">

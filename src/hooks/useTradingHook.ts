@@ -338,11 +338,17 @@ export function useTradingHook() {
   /**
    * 매수 (LIFO 스택에 추가)
    * 수량 = 2^(미체결 개수)
+   * @param ticker 종목코드
+   * @param price 매수 가격 (실시간 가격)
    */
-  const buyStock = async (ticker: string): Promise<TradingHistory | null> => {
+  const buyStock = async (ticker: string, price: number): Promise<TradingHistory | null> => {
     try {
       if (!userId) {
         throw new Error('로그인이 필요합니다.')
+      }
+
+      if (!price || price <= 0) {
+        throw new Error('유효한 가격이 필요합니다.')
       }
 
       const { data, error: fetchError } = await supabase
@@ -360,11 +366,11 @@ export function useTradingHook() {
       const openPositionCount = data?.length || 0
       const quantity = Math.pow(2, openPositionCount)
 
-      console.log(`📈 매수: 티커=${ticker}, 미체결=${openPositionCount}개, 수량=${quantity}`)
+      console.log(`📈 매수: 티커=${ticker}, 미체결=${openPositionCount}개, 수량=${quantity}, 가격=$${price}`)
 
       return await addHistory({
         ticker,
-        buyPrice: 1,
+        buyPrice: price,
         buyQuantity: quantity,
         buyTime: new Date().toISOString(),
         sellPrice: null,
@@ -381,14 +387,20 @@ export function useTradingHook() {
   /**
    * 매도 (LIFO 스택에서 제거)
    * 가장 최근 매수한 포지션 판매
+   * @param ticker 종목코드
+   * @param price 매도 가격 (실시간 가격)
    */
-  const sellStock = async (ticker: string): Promise<TradingHistory | null> => {
+  const sellStock = async (ticker: string, price: number): Promise<TradingHistory | null> => {
     setLoading(true)
     setError(null)
 
     try {
       if (!userId) {
         throw new Error('로그인이 필요합니다.')
+      }
+
+      if (!price || price <= 0) {
+        throw new Error('유효한 가격이 필요합니다.')
       }
 
       const { data, error: fetchError } = await supabase
@@ -411,10 +423,10 @@ export function useTradingHook() {
       const latestPosition = data[0] as TradingRecord
       const sellQuantity = latestPosition.buy_quantity
 
-      console.log(`📉 매도: 티커=${ticker}, 수량=${sellQuantity}`)
+      console.log(`📉 매도: 티커=${ticker}, 수량=${sellQuantity}, 가격=$${price}`)
       
       const result = await updateHistory(latestPosition.id, {
-        sellPrice: 1,
+        sellPrice: price,
         sellQuantity: sellQuantity,
         sellTime: new Date().toISOString(),
       })

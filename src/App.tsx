@@ -12,6 +12,8 @@ import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { useTradingHook } from "@/hooks/useTradingHook"
 import { useRealtimePrice } from "@/hooks/useRealtimePrice"
+import { useRealtimePriceStore } from "@/stores/useRealtimePriceStore"
+import type { RealtimePrice } from "@/types/realtime"
 
 export default function App() {
   const { login, logout, userId } = useAuthStore() // kakaoToken 대신 userId 사용
@@ -21,6 +23,29 @@ export default function App() {
   const { setSP500 } = useSP500Store()
   const { fetchTradingList, fetchHistories, cleanupDuplicates } = useTradingHook()
   const { subscribe } = useRealtimePrice()
+  const { updatePrice, setConnected } = useRealtimePriceStore()
+
+  // 실시간 가격 이벤트 리스너 (앱 레벨에서 한 번만 등록)
+  useEffect(() => {
+    if (!window.ipcRenderer) return
+
+    const handleRealtimePrice = (_event: any, data: RealtimePrice) => {
+      // 연결 상태 업데이트
+      setConnected(true)
+      
+      // Zustand store에 데이터 업데이트
+      updatePrice(data)
+    }
+
+    // 이벤트 리스너 등록 (한 번만)
+    window.ipcRenderer.on('realtime-price', handleRealtimePrice)
+    console.log('✅ 실시간 가격 이벤트 리스너 등록 완료')
+
+    return () => {
+      window.ipcRenderer.off('realtime-price', handleRealtimePrice)
+      console.log('❌ 실시간 가격 이벤트 리스너 해제')
+    }
+  }, [updatePrice, setConnected])
 
   // 다크모드 초기화
   useEffect(() => {
