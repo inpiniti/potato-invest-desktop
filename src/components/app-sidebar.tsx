@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Command, Wallet, Flag } from "lucide-react"
+import { Command, Wallet, Flag, Bug, Lightbulb, FileText, Info } from "lucide-react"
 
 import { NavUser } from "@/components/nav-user"
 import { Button } from "@/components/ui/button"
@@ -16,9 +16,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { AboutDialog } from "@/components/about-dialog"
+import { PatchNotesDialog } from "@/components/patch-notes-dialog"
 import { useTrendHook } from "@/hooks/useTrendHook"
 import { TrendAnalysisDialog } from "@/components/trend-analysis-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -203,6 +211,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // About 다이얼로그 상태
   const [aboutOpen, setAboutOpen] = React.useState(false)
+
+  // 패치 노트 다이얼로그 상태
+  const [patchNotesOpen, setPatchNotesOpen] = React.useState(false)
   
   // 트렌드 분석 다이얼로그 상태
   const [trendAnalysisOpen, setTrendAnalysisOpen] = React.useState(false)
@@ -223,19 +234,47 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton 
-                size="lg" 
-                className="md:h-8 md:p-0 cursor-pointer"
-                onClick={() => setAboutOpen(true)}
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Command className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Potato Invest</span>
-                  <span className="truncate text-xs">Desktop</span>
-                </div>
-              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton 
+                    size="lg" 
+                    className="md:h-8 md:p-0 cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Command className="size-4" />
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">Potato Invest</span>
+                      <span className="truncate text-xs">Desktop</span>
+                    </div>
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="start" side="right">
+                  <DropdownMenuItem onClick={() => setAboutOpen(true)}>
+                    <Info className="mr-2 h-4 w-4" />
+                    <span>About</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    // 추후 구현
+                    alert('준비 중입니다.')
+                  }}>
+                    <Bug className="mr-2 h-4 w-4" />
+                    <span>버그 제보</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    // 추후 구현
+                    alert('준비 중입니다.')
+                  }}>
+                    <Lightbulb className="mr-2 h-4 w-4" />
+                    <span>기능 제보</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setPatchNotesOpen(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>패치노트</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -411,6 +450,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       {/* About 다이얼로그 */}
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+
+      {/* 패치노트 다이얼로그 */}
+      <PatchNotesDialog open={patchNotesOpen} onOpenChange={setPatchNotesOpen} />
       
       {/* 트렌드 분석 다이얼로그 */}
       <TrendAnalysisDialog open={trendAnalysisOpen} onOpenChange={setTrendAnalysisOpen} />
