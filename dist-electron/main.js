@@ -19,11 +19,20 @@ function initializeWebSocket() {
     return;
   }
   if (realtimeWs) {
-    realtimeWs.close();
+    if (realtimeWs.readyState === WebSocket.OPEN || realtimeWs.readyState === WebSocket.CONNECTING) {
+      console.log("[WebSocket] 기존 연결 종료 중...");
+      realtimeWs.close();
+    }
     realtimeWs = null;
   }
   console.log("[WebSocket] 연결 시작...");
-  realtimeWs = new WebSocket("ws://ops.koreainvestment.com:21000/tryitout/HDFSCNT0");
+  setTimeout(() => {
+    realtimeWs = new WebSocket("ws://ops.koreainvestment.com:21000/tryitout/HDFSCNT0");
+    setupWebSocketHandlers();
+  }, 1e3);
+}
+function setupWebSocketHandlers() {
+  if (!realtimeWs) return;
   realtimeWs.on("open", () => {
     console.log("[WebSocket] 연결 성공");
     subscribedStocks.forEach((trKey) => {
@@ -33,13 +42,82 @@ function initializeWebSocket() {
   realtimeWs.on("message", (data) => {
     try {
       const message = data.toString("utf-8");
-      const parsed = JSON.parse(message);
-      console.log("[WebSocket] 수신:", parsed);
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send("realtime-price", parsed);
+      if (message.startsWith("{")) {
+        const parsed = JSON.parse(message);
+        if (parsed.body?.msg1?.includes("SUBSCRIBE SUCCESS")) {
+          console.log(`[WebSocket] 구독 성공: ${parsed.header?.tr_key}`);
+          return;
+        }
+        console.log("[WebSocket] 시스템 메시지:", parsed);
+        return;
+      }
+      const parts = message.split("|");
+      if (parts.length < 4) return;
+      const trId = parts[1];
+      const rawData = parts[3];
+      if (trId === "HDFSCNT0") {
+        const rows = rawData.split("^");
+        const realtimeData = {
+          RSYM: rows[0],
+          // 실시간종목코드 (D+시장+종목)
+          SYMB: rows[1],
+          // 종목코드
+          ZDIV: rows[2],
+          // 소수점자리수
+          TYMD: rows[3],
+          // 현지영업일자
+          XYMD: rows[4],
+          // 현지일자
+          XHMS: rows[5],
+          // 현지시간
+          KYMD: rows[6],
+          // 한국일자
+          KHMS: rows[7],
+          // 한국시간
+          OPEN: rows[8],
+          // 시가
+          HIGH: rows[9],
+          // 고가
+          LOW: rows[10],
+          // 저가
+          LAST: rows[11],
+          // 현재가
+          SIGN: rows[12],
+          // 대비구분
+          DIFF: rows[13],
+          // 전일대비
+          RATE: rows[14],
+          // 등락율
+          PBID: rows[15],
+          // 매수호가
+          PASK: rows[16],
+          // 매도호가
+          VBID: rows[17],
+          // 매수잔량
+          VASK: rows[18],
+          // 매도잔량
+          EVOL: rows[19],
+          // 체결량
+          TVOL: rows[20],
+          // 거래량
+          TAMT: rows[21],
+          // 거래대금
+          BIVL: rows[22],
+          // 매도체결량
+          ASVL: rows[23],
+          // 매수체결량
+          STRN: rows[24],
+          // 체결강도
+          MTYP: rows[25]
+          // 시장구분
+        };
+        console.log(`[WebSocket] 시세 수신: ${realtimeData.SYMB} $${realtimeData.LAST}`);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("realtime-price", realtimeData);
+        }
       }
     } catch (error) {
-      console.error("[WebSocket] 메시지 파싱 오류:", error);
+      console.error("[WebSocket] 메시지 처리 오류:", error);
     }
   });
   realtimeWs.on("error", (error) => {

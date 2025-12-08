@@ -18,6 +18,80 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import TradingViewWidgetChart from '@/components/TradingViewWidgetChart'
+import { useRealtimePrice } from '@/hooks/useRealtimePrice'
+
+const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick }: { 
+  trading: any, 
+  handleBuy: (ticker: string) => void, 
+  handleSell: (ticker: string) => void, 
+  handleRemoveClick: (ticker: string, name: string) => void 
+}) => {
+  const { getRealtimeData } = useRealtimePrice()
+  const realtimeData = getRealtimeData(trading.ticker)
+  const currentPrice = realtimeData ? parseFloat(realtimeData.LAST) : null
+  const changeRate = realtimeData ? parseFloat(realtimeData.RATE) : null
+  const changeDiff = realtimeData ? parseFloat(realtimeData.DIFF) : null
+
+  return (
+    <Card key={trading.ticker} className="h-40 w-full">
+      <CardHeader className="p-3 flex flex-row items-center justify-between">
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm">{trading.ticker}</CardTitle>
+                <span className="text-xs text-muted-foreground">{trading.name}</span>
+              </div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-lg font-bold">
+                  ${currentPrice ? currentPrice.toFixed(2) : '-.--'}
+                </span>
+                {changeRate !== null && (
+                  <span className={`text-xs ${changeRate > 0 ? 'text-red-400' : changeRate < 0 ? 'text-blue-400' : 'text-gray-400'}`}>
+                    {changeRate > 0 ? '+' : ''}{changeRate}% (${changeDiff})
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => handleBuy(trading.ticker)}
+                className="h-7 gap-1 bg-red-500 hover:bg-red-600"
+              >
+                <ShoppingCart className="h-3 w-3" />
+                <span className="text-xs">매수</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => handleSell(trading.ticker)}
+                className="h-7 gap-1 bg-blue-500 hover:bg-blue-600"
+              >
+                <DollarSign className="h-3 w-3" />
+                <span className="text-xs">매도</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleRemoveClick(trading.ticker, trading.name)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        <div className="text-xs text-muted-foreground">
+          추가일: {new Date(trading.addedAt).toLocaleDateString('ko-KR')}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export function MainContent() {
   const { ticker, info } = useStockStore()
@@ -396,7 +470,6 @@ export function MainContent() {
               {collapsed ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
           </div>
-          
           {!collapsed && (
             <>
               {tradings.length === 0 ? (
@@ -407,54 +480,13 @@ export function MainContent() {
                 <ScrollArea className="h-[calc(100%-2rem)]">
                   <div className="grid grid-cols-1 gap-2 p-2">
                     {tradings.map((trading) => (
-                  <Card key={trading.ticker} className="h-40 w-full">
-                    <CardHeader className="p-3 flex flex-row items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-sm">{trading.ticker}</CardTitle>
-                            <p className="text-xs text-muted-foreground">{trading.name}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {/* 매수 버튼 */}
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => handleBuy(trading.ticker)}
-                              className="h-7 gap-1 bg-red-500 hover:bg-red-600"
-                            >
-                              <ShoppingCart className="h-3 w-3" />
-                              <span className="text-xs">매수</span>
-                            </Button>
-                            {/* 매도 버튼 */}
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => handleSell(trading.ticker)}
-                              className="h-7 gap-1 bg-blue-500 hover:bg-blue-600"
-                            >
-                              <DollarSign className="h-3 w-3" />
-                              <span className="text-xs">매도</span>
-                            </Button>
-                            {/* 삭제 버튼 */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleRemoveClick(trading.ticker, trading.name)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-3 pt-0">
-                      <div className="text-xs text-muted-foreground">
-                        추가일: {new Date(trading.addedAt).toLocaleDateString('ko-KR')}
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <TradingCard 
+                        key={trading.ticker}
+                        trading={trading}
+                        handleBuy={handleBuy}
+                        handleSell={handleSell}
+                        handleRemoveClick={handleRemoveClick}
+                      />
                     ))}
                   </div>
                 </ScrollArea>

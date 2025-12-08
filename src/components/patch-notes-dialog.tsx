@@ -25,6 +25,23 @@ interface PatchVersion {
 
 const versions: PatchVersion[] = [
   {
+    version: "0.0.32",
+    date: "2025-12-08",
+    title: "실시간 시세 파싱 및 트레이딩 연동",
+    content: `
+### ⚡ 실시간 데이터 처리 고도화
+
+**주요 변경 사항:**
+- **실시간 시세 연동**: 해외주식 실시간 체결가(HDFSCNT0) 데이터를 파싱하여 트레이딩 목록의 각 종목 카드에 실시간 가격 변동을 즉시 반영했습니다.
+- **웹소켓 안정성 강화**: 중복 연결 시도로 인한 'ALREADY IN USE appkey' 오류를 해결하기 위해 연결 관리 및 재연결 로직을 개선했습니다.
+- **한글 로그 지원**: 터미널 출력 인코딩을 조정하여 로그 가독성을 높였습니다.
+
+**기술적 상세:**
+- \`electron/websocket.ts\`: 텍스트 기반 웹소켓 데이터 파싱 로직 추가
+- \`src/components/main-content.tsx\`: \`TradingCard\` 컴포넌트 분리 및 실시간 훅 적용
+`
+  },
+  {
     version: "0.0.31",
     date: "2025-12-08",
     title: "트레이딩 목록 동기화 및 버그 수정",
