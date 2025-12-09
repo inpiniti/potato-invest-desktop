@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell, ipcMain } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import * as RealtimeWS from './websocket.js'
+
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -43,9 +43,6 @@ function createWindow() {
     
     // 창을 최대화 상태로 시작
     win.maximize()
-    
-    // 웹소켓 모듈에 메인 윈도우 설정
-    RealtimeWS.setMainWindow(win)
 }
 
 // 딥링크 프로토콜 등록
@@ -236,9 +233,6 @@ if (!gotTheLock) {
 
             const data = await response.json()
             console.log('[Approval] Success:', data)
-            
-            // 웹소켓 모듈에 approval_key 설정 및 연결 초기화
-            RealtimeWS.setApprovalKey(data.approval_key)
             
             return {
                 approvalKey: data.approval_key,
@@ -1081,23 +1075,3 @@ if (!gotTheLock) {
 
     app.whenReady().then(createWindow)
 }
-    // 실시간 시세 구독 핸들러
-    ipcMain.handle('realtime-subscribe', async (_, { ticker, exchange }) => {
-        try {
-            return RealtimeWS.subscribe(ticker, exchange)
-        } catch (error: any) {
-            console.error('[Subscribe] 오류:', error)
-            throw error
-        }
-    })
-
-    // 실시간 시세 구독 취소 핸들러
-    ipcMain.handle('realtime-unsubscribe', async (_, { ticker, exchange }) => {
-        try {
-            return RealtimeWS.unsubscribe(ticker, exchange)
-        } catch (error: any) {
-            console.error('[Unsubscribe] 오류:', error)
-            throw error
-        }
-    })
-

@@ -79,16 +79,6 @@ declare global {
         bbLower: number | null
         marketCap: number | null
       }>>
-
-      // Realtime API
-      realtimeSubscribe: (params: { ticker: string; exchange: 'NAS' | 'NYS' }) => Promise<{
-        success: boolean
-        trKey: string
-      }>
-      realtimeUnsubscribe: (params: { ticker: string; exchange: 'NAS' | 'NYS' }) => Promise<{
-        success: boolean
-        trKey: string
-      }>
     }
   }
 }

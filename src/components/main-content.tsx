@@ -169,21 +169,45 @@ const TradingCard = ({
 
     // 매도 조건 먼저 체크 (보유 중일 때만)
     if (openPositions.length > 0 && checkSellCondition(trend)) {
-      setAutoTradeStatus('selling')
-      console.log(`🤖 [자동매도] ${trading.ticker} - 하락 추세 변화 감지`)
-      onAutoTrade(trading.ticker, currentPrice, 'sell')
-      setLastAutoTradeTime(now)
-      setTimeout(() => setAutoTradeStatus('idle'), 5000) // 5초 후 상태 초기화
+      // 🔒 가격 조건 체크: 현재가가 매수가보다 높은 포지션만 매도 가능
+      const profitablePosition = openPositions.find(p => currentPrice > p.buyPrice)
+      
+      if (profitablePosition) {
+        setAutoTradeStatus('selling')
+        console.log(`🤖 [자동매도] ${trading.ticker} - 하락 추세 + 이익 조건 충족 (매수가: $${profitablePosition.buyPrice.toFixed(2)}, 현재가: $${currentPrice.toFixed(2)})`)
+        onAutoTrade(trading.ticker, currentPrice, 'sell')
+        setLastAutoTradeTime(now)
+        setTimeout(() => setAutoTradeStatus('idle'), 5000)
+      } else {
+        console.log(`⏸️ [매도 보류] ${trading.ticker} - 하락 추세지만 손실 발생 (현재가: $${currentPrice.toFixed(2)} < 매수가)`)
+      }
       return
     }
 
     // 매수 조건 체크
     if (checkBuyCondition(trend)) {
+      // 🔒 가격 조건 체크: 미체결 포지션이 있으면 가장 최근 매수가보다 싸야 함
+      if (openPositions.length > 0) {
+        // 가장 최근 매수한 미체결 포지션 (buyTime 기준 정렬)
+        const sortedPositions = [...openPositions].sort((a, b) => 
+          new Date(b.buyTime).getTime() - new Date(a.buyTime).getTime()
+        )
+        const lastBuyPrice = sortedPositions[0].buyPrice
+        
+        if (currentPrice >= lastBuyPrice) {
+          console.log(`⏸️ [매수 보류] ${trading.ticker} - 상승전환이지만 가격이 높음 (현재가: $${currentPrice.toFixed(2)} >= 이전매수가: $${lastBuyPrice.toFixed(2)})`)
+          return
+        }
+        
+        console.log(`🤖 [자동매수] ${trading.ticker} - 상승전환 + 저가 조건 충족 (현재가: $${currentPrice.toFixed(2)} < 이전매수가: $${lastBuyPrice.toFixed(2)})`)
+      } else {
+        console.log(`🤖 [자동매수] ${trading.ticker} - 상승전환 변화 감지 (첫 매수, MA20: ${trend.ma20})`)
+      }
+      
       setAutoTradeStatus('buying')
-      console.log(`🤖 [자동매수] ${trading.ticker} - 상승전환 변화 감지 (MA20: ${trend.ma20})`)
       onAutoTrade(trading.ticker, currentPrice, 'buy')
       setLastAutoTradeTime(now)
-      setTimeout(() => setAutoTradeStatus('idle'), 5000) // 5초 후 상태 초기화
+      setTimeout(() => setAutoTradeStatus('idle'), 5000)
     }
   }, [trend, currentPrice, openPositions.length])
 
@@ -268,26 +292,6 @@ const TradingCard = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                onClick={onBuyClick}
-                disabled={!currentPrice}
-                className="h-7 gap-1 bg-red-500 hover:bg-red-600 disabled:opacity-50"
-              >
-                <ShoppingCart className="h-3 w-3" />
-                <span className="text-xs">매수</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="default"
-                onClick={onSellClick}
-                disabled={!currentPrice}
-                className="h-7 gap-1 bg-blue-500 hover:bg-blue-600 disabled:opacity-50"
-              >
-                <DollarSign className="h-3 w-3" />
-                <span className="text-xs">매도</span>
-              </Button>
               <Button
                 size="sm"
                 variant="ghost"

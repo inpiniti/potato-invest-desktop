@@ -1,182 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import WebSocket from "ws";
-let realtimeWs = null;
-let approvalKey = null;
-const subscribedStocks = /* @__PURE__ */ new Set();
-let mainWindow = null;
-function setMainWindow(win2) {
-  mainWindow = win2;
-}
-function setApprovalKey(key) {
-  approvalKey = key;
-  initializeWebSocket();
-}
-function initializeWebSocket() {
-  if (!approvalKey) {
-    console.error("[WebSocket] approval_key가 없습니다.");
-    return;
-  }
-  if (realtimeWs) {
-    if (realtimeWs.readyState === WebSocket.OPEN || realtimeWs.readyState === WebSocket.CONNECTING) {
-      console.log("[WebSocket] 기존 연결 종료 중...");
-      realtimeWs.close();
-    }
-    realtimeWs = null;
-  }
-  console.log("[WebSocket] 연결 시작...");
-  setTimeout(() => {
-    realtimeWs = new WebSocket("ws://ops.koreainvestment.com:21000/tryitout/HDFSCNT0");
-    setupWebSocketHandlers();
-  }, 1e3);
-}
-function setupWebSocketHandlers() {
-  if (!realtimeWs) return;
-  realtimeWs.on("open", () => {
-    console.log("[WebSocket] 연결 성공");
-    subscribedStocks.forEach((trKey) => {
-      sendSubscription(trKey, "1");
-    });
-  });
-  realtimeWs.on("message", (data) => {
-    try {
-      const message = data.toString("utf-8");
-      if (message.startsWith("{")) {
-        const parsed = JSON.parse(message);
-        if (parsed.body?.msg1?.includes("SUBSCRIBE SUCCESS")) {
-          console.log(`[WebSocket] 구독 성공: ${parsed.header?.tr_key}`);
-          return;
-        }
-        console.log("[WebSocket] 시스템 메시지:", parsed);
-        return;
-      }
-      const parts = message.split("|");
-      if (parts.length < 4) return;
-      const trId = parts[1];
-      const rawData = parts[3];
-      if (trId === "HDFSCNT0") {
-        const rows = rawData.split("^");
-        const realtimeData = {
-          RSYM: rows[0],
-          // 실시간종목코드 (D+시장+종목)
-          SYMB: rows[1],
-          // 종목코드
-          ZDIV: rows[2],
-          // 소수점자리수
-          TYMD: rows[3],
-          // 현지영업일자
-          XYMD: rows[4],
-          // 현지일자
-          XHMS: rows[5],
-          // 현지시간
-          KYMD: rows[6],
-          // 한국일자
-          KHMS: rows[7],
-          // 한국시간
-          OPEN: rows[8],
-          // 시가
-          HIGH: rows[9],
-          // 고가
-          LOW: rows[10],
-          // 저가
-          LAST: rows[11],
-          // 현재가
-          SIGN: rows[12],
-          // 대비구분
-          DIFF: rows[13],
-          // 전일대비
-          RATE: rows[14],
-          // 등락율
-          PBID: rows[15],
-          // 매수호가
-          PASK: rows[16],
-          // 매도호가
-          VBID: rows[17],
-          // 매수잔량
-          VASK: rows[18],
-          // 매도잔량
-          EVOL: rows[19],
-          // 체결량
-          TVOL: rows[20],
-          // 거래량
-          TAMT: rows[21],
-          // 거래대금
-          BIVL: rows[22],
-          // 매도체결량
-          ASVL: rows[23],
-          // 매수체결량
-          STRN: rows[24],
-          // 체결강도
-          MTYP: rows[25]
-          // 시장구분
-        };
-        console.log(`[WebSocket] 시세 수신: ${realtimeData.SYMB} $${realtimeData.LAST}`);
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send("realtime-price", realtimeData);
-        }
-      }
-    } catch (error) {
-      console.error("[WebSocket] 메시지 처리 오류:", error);
-    }
-  });
-  realtimeWs.on("error", (error) => {
-    console.error("[WebSocket] 오류:", error);
-  });
-  realtimeWs.on("close", () => {
-    console.log("[WebSocket] 연결 종료");
-    realtimeWs = null;
-    setTimeout(() => {
-      if (approvalKey) {
-        console.log("[WebSocket] 재연결 시도...");
-        initializeWebSocket();
-      }
-    }, 5e3);
-  });
-}
-function sendSubscription(trKey, trType) {
-  if (!realtimeWs || realtimeWs.readyState !== WebSocket.OPEN) {
-    console.error("[WebSocket] 연결되지 않음");
-    return;
-  }
-  if (!approvalKey) {
-    console.error("[WebSocket] approval_key가 없습니다.");
-    return;
-  }
-  const message = JSON.stringify({
-    header: {
-      approval_key: approvalKey,
-      custtype: "P",
-      tr_type: trType,
-      "content-type": "utf-8"
-    },
-    body: {
-      input: {
-        tr_id: "HDFSCNT0",
-        tr_key: trKey
-      }
-    }
-  });
-  console.log(`[WebSocket] ${trType === "1" ? "구독" : "해제"} 전송:`, trKey);
-  console.log("[WebSocket] 메시지:", message);
-  realtimeWs.send(message);
-}
-function subscribe(ticker, exchange) {
-  const marketCode = exchange === "NAS" ? "NAS" : "NYS";
-  const trKey = `D${marketCode}${ticker}`;
-  console.log("[Subscribe] 구독 요청:", trKey);
-  subscribedStocks.add(trKey);
-  sendSubscription(trKey, "1");
-  return { success: true, trKey };
-}
-function unsubscribe(ticker, exchange) {
-  const marketCode = exchange === "NAS" ? "NAS" : "NYS";
-  const trKey = `D${marketCode}${ticker}`;
-  console.log("[Unsubscribe] 구독 취소 요청:", trKey);
-  subscribedStocks.delete(trKey);
-  sendSubscription(trKey, "2");
-  return { success: true, trKey };
-}
 const __filename$1 = fileURLToPath(import.meta.url);
 const __dirname$1 = path.dirname(__filename$1);
 process.env.DIST = path.join(__dirname$1, "../dist");
@@ -207,7 +31,6 @@ function createWindow() {
     win.loadFile(path.join(process.env.DIST || "", "index.html"));
   }
   win.maximize();
-  setMainWindow(win);
 }
 try {
   if (process.defaultApp) {
@@ -359,7 +182,6 @@ if (!gotTheLock) {
       }
       const data = await response.json();
       console.log("[Approval] Success:", data);
-      setApprovalKey(data.approval_key);
       return {
         approvalKey: data.approval_key
       };
@@ -1100,19 +922,3 @@ if (!gotTheLock) {
   });
   app.whenReady().then(createWindow);
 }
-ipcMain.handle("realtime-subscribe", async (_, { ticker, exchange }) => {
-  try {
-    return subscribe(ticker, exchange);
-  } catch (error) {
-    console.error("[Subscribe] 오류:", error);
-    throw error;
-  }
-});
-ipcMain.handle("realtime-unsubscribe", async (_, { ticker, exchange }) => {
-  try {
-    return unsubscribe(ticker, exchange);
-  } catch (error) {
-    console.error("[Unsubscribe] 오류:", error);
-    throw error;
-  }
-});

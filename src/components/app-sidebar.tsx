@@ -149,6 +149,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [mails, setMails] = React.useState(data.mails)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [recommendedOnly, setRecommendedOnly] = React.useState(false)
+  const [sortByMarketCap, setSortByMarketCap] = React.useState(false)
   const { setOpen } = useSidebar()
   const { holdings } = useBalanceStore()
   const { sp500 } = useSP500Store()
@@ -181,8 +182,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       })
     }
 
+    // 시총 정렬
+    if (sortByMarketCap) {
+      result = [...result].sort((a, b) => {
+        const aMarketCap = getBBData(a.ticker)?.marketCap ?? 0
+        const bMarketCap = getBBData(b.ticker)?.marketCap ?? 0
+        return bMarketCap - aMarketCap // 내림차순 (큰 것부터)
+      })
+    }
+
     return result
-  }, [sp500, searchQuery, recommendedOnly, getTrendByTicker])
+  }, [sp500, searchQuery, recommendedOnly, sortByMarketCap, getTrendByTicker, getBBData])
 
   const filteredHoldings = React.useMemo(() => {
     if (!searchQuery.trim()) return holdings
@@ -422,6 +432,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   onClick={() => setRecommendedOnly(!recommendedOnly)}
                 >
                   추천
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={sortByMarketCap ? "default" : "outline"}
+                  className={`h-7 text-xs ${sortByMarketCap ? 'bg-green-500 hover:bg-green-600' : ''}`}
+                  onClick={() => setSortByMarketCap(!sortByMarketCap)}
+                >
+                  시총
                 </Button>
                 <Button 
                   size="sm" 

@@ -561,5 +561,20 @@
       "src/types/electron.d.ts",
       "src/types/tradingview.ts"
     ]
+  },
+  {
+    "version": "0.0.37",
+    "hash": "",
+    "date": "Tue Dec 10 02:14:00 2025 +0900",
+    "message": "refactor: 웹소켓 싱글톤 패턴 적용 및 자동 매매 조건 개선",
+    "files": [
+      "dist-electron/main.js",
+      "electron/main.ts",
+      "electron/websocket.ts (삭제)",
+      "src/components/app-sidebar.tsx",
+      "src/components/main-content.tsx",
+      "src/hooks/useRealtimePrice.ts",
+      "src/types/electron.d.ts"
+    ]
   }
 ]
