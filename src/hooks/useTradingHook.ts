@@ -56,6 +56,7 @@ export function useTradingHook() {
     uid: record.uid,
     ticker: record.ticker,
     name: record.name,
+    exchange: record.exchange,
     addedAt: record.added_at,
   })
 
@@ -103,7 +104,7 @@ export function useTradingHook() {
   /**
    * 트레이딩 목록에 추가
    */
-  const addTradingItem = async (ticker: string, name: string): Promise<TradingListItem | null> => {
+  const addTradingItem = async (ticker: string, name: string, exchange: 'NAS' | 'NYS'): Promise<TradingListItem | null> => {
     setLoading(true)
     setError(null)
 
@@ -119,6 +120,7 @@ export function useTradingHook() {
         uid: userId,
         ticker,
         name,
+        exchange,
         added_at: new Date().toISOString(),
       }
 

@@ -1,8 +1,6 @@
-import { useState } from "react"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -12,13 +10,16 @@ interface AboutDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+// process.versions 접근을 위한 타입 정의
+declare const process: { versions?: { electron?: string; chrome?: string; node?: string; v8?: string } } | undefined
+
 export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
   // 앱 버전 정보 (package.json에서 가져올 수도 있음)
   const appVersion = "1.0.0"
-  const electronVersion = typeof process !== 'undefined' && process.versions?.electron || "N/A"
-  const chromeVersion = typeof process !== 'undefined' && process.versions?.chrome || "N/A"
-  const nodeVersion = typeof process !== 'undefined' && process.versions?.node || "N/A"
-  const v8Version = typeof process !== 'undefined' && process.versions?.v8 || "N/A"
+  const electronVersion = (typeof process !== 'undefined' && process?.versions?.electron) || "N/A"
+  const chromeVersion = (typeof process !== 'undefined' && process?.versions?.chrome) || "N/A"
+  const nodeVersion = (typeof process !== 'undefined' && process?.versions?.node) || "N/A"
+  const v8Version = (typeof process !== 'undefined' && process?.versions?.v8) || "N/A"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -11,7 +11,6 @@ import { useAccountStore } from "@/stores/useAccountStore"
 import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { useTradingHook } from "@/hooks/useTradingHook"
-import { useRealtimePrice } from "@/hooks/useRealtimePrice"
 import { useRealtimePriceStore } from "@/stores/useRealtimePriceStore"
 import type { RealtimePrice } from "@/types/realtime"
 
@@ -22,7 +21,6 @@ export default function App() {
   const { setHoldings, setBalance } = useBalanceStore()
   const { setSP500 } = useSP500Store()
   const { fetchTradingList, fetchHistories, cleanupDuplicates } = useTradingHook()
-  const { subscribe } = useRealtimePrice()
   const { updatePrice, setConnected } = useRealtimePriceStore()
 
   // 실시간 가격 이벤트 리스너 (앱 레벨에서 한 번만 등록)
@@ -94,9 +92,10 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [login, logout])
 
-  // 로그인 시 트레이딩 데이터 자동 로드 및 실시간 구독
+  // 로그인 시 트레이딩 데이터 자동 로드
+  // 실시간 구독은 main-content.tsx에서 tradings 배열 변경 시 자동 처리됨
   useEffect(() => {
-    const loadAndSubscribe = async () => {
+    const loadTradingData = async () => {
       if (userId) {
         console.log('로그인 감지 - 트레이딩 데이터 로드 시작...')
         
@@ -109,26 +108,12 @@ export default function App() {
         
         await fetchHistories()
         
-        // 트레이딩 목록의 모든 종목 실시간 구독
-        if (tradingList && tradingList.length > 0) {
-          console.log(`📡 실시간 시세 구독 시작: ${tradingList.length}개 종목`)
-          
-          for (const item of tradingList) {
-            try {
-              // 거래소 정보는 S&P 500 store에서 가져오거나 기본값 사용
-              // 일단 기본값으로 NAS 사용 (추후 개선 가능)
-              await subscribe(item.ticker, 'NAS')
-            } catch (error) {
-              console.error(`실시간 구독 실패: ${item.ticker}`, error)
-            }
-          }
-        } else {
-          console.log('📋 트레이딩 목록이 비어있습니다.')
-        }
+        // 실시간 구독은 main-content.tsx에서 tradings 변경 시 자동 처리됨
+        console.log('📡 실시간 구독은 트레이딩 패널에서 자동 관리됩니다.')
       }
     }
     
-    loadAndSubscribe()
+    loadTradingData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 

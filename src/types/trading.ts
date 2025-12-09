@@ -38,6 +38,7 @@ export interface TradingListItem {
   uid: string // 사용자 UID (kakaotoken)
   ticker: string // 티커 심볼
   name: string // 종목명
+  exchange: 'NAS' | 'NYS' // 거래소 (NASDAQ 또는 NYSE)
   addedAt: string // 추가 시간 (ISO 8601 형식)
 }
 
@@ -49,6 +50,7 @@ export interface TradingListRecord {
   uid: string
   ticker: string
   name: string
+  exchange: 'NAS' | 'NYS'
   added_at: string
   created_at?: string
   updated_at?: string

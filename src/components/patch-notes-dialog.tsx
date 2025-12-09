@@ -25,6 +25,44 @@ interface PatchVersion {
 
 const versions: PatchVersion[] = [
   {
+    version: "0.0.34",
+    date: "2025-12-09",
+    title: "웹소켓 실시간 구독 리팩토링 및 추세 조회 큐 시스템",
+    content: `
+### 🔄 웹소켓 실시간 구독 시스템 개편
+
+**주요 변경 사항:**
+- **예전 방식 복원**: 트레이딩 목록 변경 시 자동으로 구독/해제 처리 (컴포넌트 레벨에서 관리)
+- **거래소(exchange) 지원**: 티커와 함께 거래소 정보(NAS/NYS)를 저장하여 정확한 시세 구독
+- **TradingListItem 타입 확장**: \`exchange\` 필드 추가
+
+### 📊 추세 조회 큐 시스템
+
+- **순차 처리**: 여러 종목 동시 조회 시 실패 방지를 위한 큐(Queue) 시스템 도입
+- **응답 기준 쓰로틀링**: 요청 시간이 아닌 응답 완료 시간 기준으로 1분 간격 적용
+- **API 부하 방지**: 요청 간 200ms 딜레이 적용
+- **캐시 유지**: 조회 중에도 기존 추세 데이터는 계속 표시
+
+### 🎨 UI/UX 개선
+
+- **2열 Grid 레이아웃**: 트레이딩 패널이 가로 2개씩 배치되어 화면 활용도 향상
+- **테두리 하이라이트**: 실시간 데이터 수신 시 패널 테두리가 1초간 밝아졌다가 서서히 연해지는 애니메이션
+- **Loader2 스피너**: 추세 조회 중 lucide-react의 Loader2 아이콘으로 로딩 표시 (기존 데이터 유지)
+
+### 🗑️ 제거된 기능
+
+- **상세조회 제거**: 웹소켓으로 실시간 수신되므로 0.0.33에서 추가된 별도 상세조회 불필요
+
+**기술적 상세:**
+- \`useTrendQueue.ts\`: 추세 조회 큐 관리 훅 신규 생성
+- \`main-content.tsx\`: TradingCard 분리, 웹소켓 구독 관리, Grid 레이아웃 적용
+- \`trading.ts\`: TradingListItem/TradingListRecord에 exchange 필드 추가
+- \`useTradingHook.ts\`: addTradingItem에 exchange 파라미터 추가
+
+⚠️ **마이그레이션 필요**: Supabase trading_list 테이블에 exchange 컬럼 추가 필요
+`
+  },
+  {
     version: "0.0.33",
     date: "2025-12-08",
     title: "자동 트레이딩 및 추세 분석 기능 추가",

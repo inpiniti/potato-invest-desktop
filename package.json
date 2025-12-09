@@ -1,7 +1,7 @@
 {
   "name": "electron-react-shadcn",
   "private": true,
-  "version": "0.0.33",
+  "version": "0.0.34",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {

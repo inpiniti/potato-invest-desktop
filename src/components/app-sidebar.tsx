@@ -27,7 +27,6 @@ import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { AboutDialog } from "@/components/about-dialog"
 import { PatchNotesDialog } from "@/components/patch-notes-dialog"
-import { useTrendHook } from "@/hooks/useTrendHook"
 import { TrendAnalysisDialog } from "@/components/trend-analysis-dialog"
 import { Badge } from "@/components/ui/badge"
 import { useTrendStore } from "@/stores/useTrendStore"
@@ -223,7 +222,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   // S&P 500 종목 클릭 핸들러
-  const handleStockClick = async (ticker: string, exchange: string) => {
+  const handleStockClick = async (ticker: string, _exchange: string) => {
     try {
       console.log(`${ticker} 종목 선택 및 크롤링 시작...`)
       

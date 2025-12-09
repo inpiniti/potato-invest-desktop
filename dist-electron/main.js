@@ -405,7 +405,7 @@ if (!gotTheLock) {
   });
   ipcMain.handle("sp500-fetch", async () => {
     try {
-      const cheerio = await import("./index-fWQz7Isw.js");
+      const cheerio = await import("./index-Dz8Bzvfl.js");
       const response = await fetch(
         "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
         {

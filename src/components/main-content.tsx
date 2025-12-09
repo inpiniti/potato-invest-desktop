@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useStockStore } from '@/stores/useStockStore'
 import { useTradingStore } from '@/stores/useTradingStore'
 import { useTradingHook } from '@/hooks/useTradingHook'
-import { useTrendHook } from '@/hooks/useTrendHook'
+import { useRealtimePrice } from '@/hooks/useRealtimePrice'
+import { useTrendQueue } from '@/hooks/useTrendQueue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, TrendingDown, Minus, X, ShoppingCart, DollarSign, ChevronDown, ChevronUp } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, X, ShoppingCart, DollarSign, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,8 +20,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import TradingViewWidgetChart from '@/components/TradingViewWidgetChart'
-import { useRealtimePrice } from '@/hooks/useRealtimePrice'
 import type { Trend, TrendType } from '@/types/trend'
+import type { RealtimePrice } from '@/types/realtime'
+import type { TradingListItem } from '@/types/trading'
 import { toast } from 'sonner'
 
 // 추세 타입에 따른 색상 및 아이콘 반환
@@ -37,24 +39,36 @@ const getTrendStyle = (trend: TrendType) => {
   }
 }
 
-const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick, onAutoTrade }: { 
-  trading: any, 
-  handleBuy: (ticker: string, price: number) => void, 
-  handleSell: (ticker: string, price: number) => void, 
-  handleRemoveClick: (ticker: string, name: string) => void,
+interface TradingCardProps {
+  trading: TradingListItem
+  realtimeData: RealtimePrice | undefined
+  trend: Trend | null
+  trendLoading: boolean
+  handleBuy: (ticker: string, price: number) => void
+  handleSell: (ticker: string, price: number) => void
+  handleRemoveClick: (ticker: string, name: string) => void
   onAutoTrade: (ticker: string, price: number, type: 'buy' | 'sell') => void
-}) => {
-  const { getRealtimeData } = useRealtimePrice()
-  const { getTrendMinutes } = useTrendHook()
+}
+
+const TradingCard = ({ 
+  trading, 
+  realtimeData,
+  trend,
+  trendLoading,
+  handleBuy, 
+  handleSell, 
+  handleRemoveClick, 
+  onAutoTrade 
+}: TradingCardProps) => {
   const { getHistoriesByTicker } = useTradingStore()
-  const [trend, setTrend] = useState<Trend | null>(null)
-  const [prevTrend, setPrevTrend] = useState<Trend | null>(null) // 이전 추세 저장
-  const [trendLoading, setTrendLoading] = useState(false)
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0)
+  const [prevTrend, setPrevTrend] = useState<Trend | null>(null)
   const [lastAutoTradeTime, setLastAutoTradeTime] = useState<number>(0)
   const [autoTradeStatus, setAutoTradeStatus] = useState<'idle' | 'buying' | 'selling'>('idle')
+  
+  // 테두리 애니메이션 상태
+  const [isHighlighted, setIsHighlighted] = useState(false)
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const realtimeData = getRealtimeData(trading.ticker)
   const currentPrice = realtimeData ? parseFloat(realtimeData.LAST) : null
   const changeRate = realtimeData ? parseFloat(realtimeData.RATE) : null
   const changeDiff = realtimeData ? parseFloat(realtimeData.DIFF) : null
@@ -64,6 +78,29 @@ const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick, onAuto
   
   // 미체결 포지션 개수 (매수했지만 아직 매도하지 않은 것)
   const openPositions = histories.filter(h => h.sellPrice === null)
+
+  // 실시간 데이터 수신 시 테두리 하이라이트 (가시성)
+  useEffect(() => {
+    if (realtimeData) {
+      setIsHighlighted(true)
+      
+      // 기존 타임아웃 정리
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current)
+      }
+      
+      // 1초 후 하이라이트 해제
+      highlightTimeoutRef.current = setTimeout(() => {
+        setIsHighlighted(false)
+      }, 1000)
+    }
+    
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current)
+      }
+    }
+  }, [realtimeData?.KHMS]) // 한국시간이 변경될 때마다 (새 데이터 수신)
 
   // 자동 매수 조건 체크
   const checkBuyCondition = (t: Trend): boolean => {
@@ -89,46 +126,12 @@ const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick, onAuto
            prev.ma100 !== curr.ma100 || prev.ma200 !== curr.ma200
   }
 
-  // 추세 데이터 조회 함수 (1분 쓰로틀링 적용)
-  const fetchTrend = async (force: boolean = false) => {
-    const now = Date.now()
-    const timeSinceLastFetch = now - lastFetchTime
-    const ONE_MINUTE = 60 * 1000
-
-    // 강제가 아니고 1분이 지나지 않았으면 스킵
-    if (!force && timeSinceLastFetch < ONE_MINUTE) {
-      return
-    }
-
-    setTrendLoading(true)
-    try {
-      const trendData = await getTrendMinutes({
-        ticker: trading.ticker,
-        exchange: 'NAS' // 기본값 NAS
-      })
-      
-      // 이전 추세 저장 후 현재 추세 업데이트
+  // 추세 변화 시 이전 추세 저장
+  useEffect(() => {
+    if (trend && hasTrendChanged(prevTrend, trend)) {
       setPrevTrend(trend)
-      setTrend(trendData)
-      setLastFetchTime(now)
-    } catch (err) {
-      console.error(`${trading.ticker} 추세 조회 실패:`, err)
-    } finally {
-      setTrendLoading(false)
     }
-  }
-
-  // 컴포넌트 마운트 시 즉시 조회 (트레이딩 추가 시)
-  useEffect(() => {
-    fetchTrend(true) // force=true로 즉시 조회
-  }, [trading.ticker])
-
-  // 실시간 데이터 수신 시 1분 간격으로 조회
-  useEffect(() => {
-    if (realtimeData) {
-      fetchTrend(false) // 쓰로틀링 적용
-    }
-  }, [realtimeData])
+  }, [trend])
 
   // 자동 트레이딩 로직
   useEffect(() => {
@@ -188,7 +191,14 @@ const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick, onAuto
   }
 
   return (
-    <Card key={trading.ticker} className="w-full">
+    <Card 
+      key={trading.ticker} 
+      className={`w-full transition-all duration-1000 ${
+        isHighlighted 
+          ? 'border-primary/80 shadow-lg shadow-primary/20' 
+          : 'border-border'
+      }`}
+    >
       <CardHeader className="p-3 flex flex-row items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center justify-between">
@@ -246,11 +256,13 @@ const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick, onAuto
           <div className="text-xs text-muted-foreground">
             추가일: {new Date(trading.addedAt).toLocaleDateString('ko-KR')}
           </div>
-          {/* 추세 정보 표시 */}
+          {/* 추세 정보 표시 - 로딩 중에도 기존 데이터 유지 */}
           <div className="flex items-center gap-2">
-            {trendLoading ? (
-              <span className="text-xs text-muted-foreground">추세 분석중...</span>
-            ) : trend ? (
+            {/* 로딩 중이면 스피너 표시 (기존 데이터는 유지) */}
+            {trendLoading && (
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+            )}
+            {trend ? (
               <>
                 {(['ma20', 'ma50', 'ma100', 'ma200'] as const).map((maKey) => {
                   const style = getTrendStyle(trend[maKey])
@@ -263,9 +275,9 @@ const TradingCard = ({ trading, handleBuy, handleSell, handleRemoveClick, onAuto
                   )
                 })}
               </>
-            ) : (
+            ) : !trendLoading ? (
               <span className="text-xs text-muted-foreground">-</span>
-            )}
+            ) : null}
           </div>
         </div>
         
@@ -335,6 +347,18 @@ export function MainContent() {
     sellStock,
     error: tradingError 
   } = useTradingHook()
+  const { subscribe, unsubscribe, getRealtimeData } = useRealtimePrice()
+  const { requestTrend } = useTrendQueue()
+
+  // 이전 트레이딩 목록 (구독/해제 비교용)
+  const prevTradingsRef = useRef<TradingListItem[]>([])
+  
+  // 종목별 추세 데이터 상태
+  const [trendMap, setTrendMap] = useState<Map<string, Trend | null>>(new Map())
+  const [trendLoadingMap, setTrendLoadingMap] = useState<Map<string, boolean>>(new Map())
+  
+  // 종목별 마지막 수신 시간 (추세 조회 트리거용)
+  const lastDataTimeRef = useRef<Map<string, number>>(new Map())
 
   // Dialog 상태 관리
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -346,6 +370,98 @@ export function MainContent() {
 
   // 트레이딩 패널 축소 상태
   const [collapsed, setCollapsed] = useState(false)
+
+  /**
+   * 트레이딩 목록 변경 시 구독/해제 처리 (예전 방식)
+   */
+  useEffect(() => {
+    const prevTradings = prevTradingsRef.current
+    const currentTradings = tradings
+
+    // 새로 추가된 종목 구독
+    const added = currentTradings.filter(
+      curr => !prevTradings.some(prev => prev.ticker === curr.ticker)
+    )
+    
+    // 제거된 종목 구독 해제
+    const removed = prevTradings.filter(
+      prev => !currentTradings.some(curr => curr.ticker === prev.ticker)
+    )
+
+    // 구독 등록
+    added.forEach(async (item) => {
+      try {
+        console.log(`📡 구독 등록: ${item.ticker} (${item.exchange})`)
+        await subscribe(item.ticker, item.exchange)
+      } catch (error) {
+        console.error(`구독 실패: ${item.ticker}`, error)
+      }
+    })
+
+    // 구독 해제
+    removed.forEach(async (item) => {
+      try {
+        console.log(`📡 구독 해제: ${item.ticker} (${item.exchange})`)
+        await unsubscribe(item.ticker, item.exchange)
+      } catch (error) {
+        console.error(`구독 해제 실패: ${item.ticker}`, error)
+      }
+    })
+
+    // 새로 추가된 종목의 추세 즉시 조회
+    added.forEach((item) => {
+      fetchTrendForTicker(item.ticker, item.exchange)
+    })
+
+    prevTradingsRef.current = currentTradings
+  }, [tradings, subscribe, unsubscribe])
+
+  /**
+   * 특정 종목의 추세 조회 (큐에 추가)
+   */
+  const fetchTrendForTicker = useCallback(async (ticker: string, exchange: 'NAS' | 'NYS') => {
+    setTrendLoadingMap(prev => {
+      const newMap = new Map(prev)
+      newMap.set(ticker, true)
+      return newMap
+    })
+
+    try {
+      const trend = await requestTrend(ticker, exchange)
+      setTrendMap(prev => {
+        const newMap = new Map(prev)
+        newMap.set(ticker, trend)
+        return newMap
+      })
+    } finally {
+      setTrendLoadingMap(prev => {
+        const newMap = new Map(prev)
+        newMap.set(ticker, false)
+        return newMap
+      })
+    }
+  }, [requestTrend])
+
+  /**
+   * 실시간 데이터 수신 시 추세 조회 트리거 (1분 간격)
+   */
+  useEffect(() => {
+    const ONE_MINUTE = 60 * 1000
+    const now = Date.now()
+
+    tradings.forEach((trading) => {
+      const realtimeData = getRealtimeData(trading.ticker)
+      if (!realtimeData) return
+
+      const lastTime = lastDataTimeRef.current.get(trading.ticker) || 0
+      
+      // 1분이 지났으면 추세 조회
+      if (now - lastTime >= ONE_MINUTE) {
+        lastDataTimeRef.current.set(trading.ticker, now)
+        fetchTrendForTicker(trading.ticker, trading.exchange)
+      }
+    })
+  }, [tradings.map(t => getRealtimeData(t.ticker)?.KHMS).join(',')])
 
   if (!ticker) {
     return (
@@ -375,11 +491,14 @@ export function MainContent() {
         }
       )
     } else {
+      // 거래소 정보 가져오기 (info에서 또는 기본값)
+      const exchange: 'NAS' | 'NYS' = info?.basicInfo?.exchange === 'NYSE' ? 'NYS' : 'NAS'
+      
       openDialog(
         '트레이딩 목록에 추가',
         `${ticker}를 트레이딩 목록에 추가하시겠습니까?`,
         async () => {
-          const result = await addTradingItem(ticker, info?.name || ticker)
+          const result = await addTradingItem(ticker, info?.name || ticker, exchange)
           setDialogOpen(false)
           
           // 중복 체크 실패 시 알림
@@ -735,11 +854,15 @@ export function MainContent() {
                 </div>
               ) : (
                 <ScrollArea className="h-[calc(100%-2rem)]">
-                  <div className="grid grid-cols-1 gap-2 p-2">
+                  {/* 2열 Grid 레이아웃 */}
+                  <div className="grid grid-cols-2 gap-2 p-2">
                     {tradings.map((trading) => (
                       <TradingCard 
                         key={trading.ticker}
                         trading={trading}
+                        realtimeData={getRealtimeData(trading.ticker)}
+                        trend={trendMap.get(trading.ticker) || null}
+                        trendLoading={trendLoadingMap.get(trading.ticker) || false}
                         handleBuy={handleBuy}
                         handleSell={handleSell}
                         handleRemoveClick={handleRemoveClick}
