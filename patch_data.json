@@ -477,5 +477,89 @@
       "src/types/realtime.ts",
       "vite.config.ts"
     ]
+  },
+  {
+    "version": "0.0.30",
+    "hash": "fec7186",
+    "date": "Mon Dec 8 16:08:06 2025 +0900",
+    "message": "feat: 패치 노트 다이얼로그 개선 (버전 히스토리 사이드바 추가)",
+    "files": [
+      "src/components/patch-notes-dialog.tsx"
+    ]
+  },
+  {
+    "version": "0.0.31",
+    "hash": "91c8a8c",
+    "date": "Mon Dec 8 19:00:00 2025 +0900",
+    "message": "fix: 트레이딩 목록 동기화 문제 해결 및 중복 데이터 정리 기능 추가",
+    "files": [
+      "src/hooks/useTradingHook.ts",
+      "src/stores/useTradingStore.ts"
+    ]
+  },
+  {
+    "version": "0.0.32",
+    "hash": "6d436cd",
+    "date": "Mon Dec 8 22:00:00 2025 +0900",
+    "message": "feat: 실시간 시세 데이터 파싱 적용 및 트레이딩 UI 연동, 웹소켓 연결 안정화",
+    "files": [
+      "src/components/main-content.tsx",
+      "src/hooks/useRealtimePrice.ts",
+      "electron/websocket.ts"
+    ]
+  },
+  {
+    "version": "0.0.33",
+    "hash": "c76a447",
+    "date": "Tue Dec 9 01:00:00 2025 +0900",
+    "message": "feat: 자동 트레이딩 및 추세 분석 기능 추가",
+    "files": [
+      "src/components/main-content.tsx",
+      "src/hooks/useTrendHook.ts",
+      "src/stores/useTrendStore.ts"
+    ]
+  },
+  {
+    "version": "0.0.34",
+    "hash": "765b570",
+    "date": "Tue Dec 9 01:08:06 2025 +0900",
+    "message": "feat: 웹소켓 실시간 구독 리팩토링 및 추세 조회 큐 시스템",
+    "files": [
+      "src/hooks/useRealtimePrice.ts",
+      "src/hooks/useTrendHook.ts",
+      "electron/websocket.ts"
+    ]
+  },
+  {
+    "version": "0.0.35",
+    "hash": "f14bfab",
+    "date": "Tue Dec 9 16:00:00 2025 +0900",
+    "message": "feat: 버그 제보 / 기능 제안 게시판 시스템 구현",
+    "files": [
+      "src/components/feedback-dialog.tsx",
+      "electron/main.ts",
+      "electron/preload.ts"
+    ]
+  },
+  {
+    "version": "0.0.36",
+    "hash": "",
+    "date": "Tue Dec 9 20:53:00 2025 +0900",
+    "message": "feat: TradingView 볼린저 밴드 데이터 연동 및 웹소켓 구독 제거, 추세 분석 효율화",
+    "files": [
+      "dist-electron/main.js",
+      "dist-electron/preload.js",
+      "electron/main.ts",
+      "electron/preload.ts",
+      "src/App.tsx",
+      "src/components/app-sidebar.tsx",
+      "src/components/main-content.tsx",
+      "src/hooks/useRealtimePrice.ts",
+      "src/hooks/useTradingViewHook.ts",
+      "src/hooks/useTrendHook.ts",
+      "src/stores/useTradingViewStore.ts",
+      "src/types/electron.d.ts",
+      "src/types/tradingview.ts"
+    ]
   }
 ]

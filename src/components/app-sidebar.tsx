@@ -34,6 +34,8 @@ import { useTrendStore } from "@/stores/useTrendStore"
 import { useStockHook } from "@/hooks/useStockHook"
 import { useStockStore } from "@/stores/useStockStore"
 import { useTradingStore } from "@/stores/useTradingStore"
+import { useTradingViewStore } from "@/stores/useTradingViewStore"
+import { calculateBBSignal, type BBSignal } from "@/types/tradingview"
 
 // This is sample data
 const data = {
@@ -154,6 +156,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { getInfo, getNews, getToss } = useStockHook()
   const { ticker: selectedTicker, setTicker } = useStockStore()
   const { isInTrading } = useTradingStore()
+  const { getBBData } = useTradingViewStore()
 
   // 검색어로 필터된 목록
   const filteredSP500 = React.useMemo(() => {
@@ -220,6 +223,52 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           variant: 'secondary' as const
         }
     }
+  }
+
+  // 볼린저 밴드 신호에 따른 Badge 스타일 결정
+  const getBBSignalBadgeStyle = (signal: BBSignal) => {
+    switch (signal) {
+      case '강력매수':
+        return {
+          className: 'h-4 px-1 text-[10px] bg-red-600 text-white font-bold',
+          label: '강력매수'
+        }
+      case '매수':
+        return {
+          className: 'h-4 px-1 text-[10px] bg-red-400 text-white',
+          label: '매수'
+        }
+      case '매도':
+        return {
+          className: 'h-4 px-1 text-[10px] bg-blue-400 text-white',
+          label: '매도'
+        }
+      case '강력매도':
+        return {
+          className: 'h-4 px-1 text-[10px] bg-blue-600 text-white font-bold',
+          label: '강력매도'
+        }
+      default:
+        return {
+          className: 'h-4 px-1 text-[10px] bg-gray-400 text-white',
+          label: '-'
+        }
+    }
+  }
+
+  // 시가총액 포맷 (억 단위)
+  const formatMarketCap = (marketCap: number | null): string => {
+    if (marketCap === null) return '-'
+    
+    // 단위: 십억 달러
+    if (marketCap >= 1e12) {
+      return `$${(marketCap / 1e12).toFixed(1)}T`
+    } else if (marketCap >= 1e9) {
+      return `$${(marketCap / 1e9).toFixed(1)}B`
+    } else if (marketCap >= 1e6) {
+      return `$${(marketCap / 1e6).toFixed(1)}M`
+    }
+    return `$${marketCap.toLocaleString()}`
   }
 
   // S&P 500 종목 클릭 핸들러
@@ -407,7 +456,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <a
                       href="#"
                       key={holding.pdno}
-                      className="flex flex-col items-start gap-1 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      className={`flex flex-col items-start gap-1 whitespace-nowrap border-b p-2 text-xs leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+                        selectedTicker === holding.pdno ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                      }`}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        // 보유종목은 해외주식이므로 거래소 정보 추정 (기본 NAS)
+                        handleStockClick(holding.pdno, 'NAS')
+                      }}
                     >
                       <div className="flex w-full items-center gap-2">
                         <span className="text-sm font-medium">{holding.prdt_name}</span>
@@ -434,6 +490,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 ) : (
                   filteredSP500.map((stock) => {
                     const trend = getTrendByTicker(stock.ticker)
+                    const bbData = getBBData(stock.ticker)
+                    const bbSignal = bbData ? calculateBBSignal(bbData) : null
+                    const bbStyle = getBBSignalBadgeStyle(bbSignal)
                     
                     return (
                       <a
@@ -452,6 +511,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           {isInTrading(stock.ticker) && (
                             <ListChecks className="h-3.5 w-3.5 text-green-500" />
                           )}
+                          {/* 시가총액 */}
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatMarketCap(bbData?.marketCap ?? null)}
+                          </span>
+                          {/* 볼린저 밴드 신호 */}
+                          <Badge className={bbStyle.className}>
+                            {bbStyle.label}
+                          </Badge>
                           <span className="ml-auto text-xs text-muted-foreground">{stock.exchange}</span>
                         </div>
                         <div className="flex w-full gap-2">
@@ -475,6 +542,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           >
                             200
                           </Badge>
+                          {/* 종가 표시 */}
+                          {bbData?.close && (
+                            <span className="ml-auto text-[10px] text-muted-foreground">
+                              ${bbData.close.toFixed(2)}
+                            </span>
+                          )}
                         </div>
                       </a>
                     )

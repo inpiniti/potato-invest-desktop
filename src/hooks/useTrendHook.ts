@@ -269,8 +269,8 @@ export function useTrendHook() {
       }
     }
 
-    // 5개의 워커를 병렬로 실행
-    const workerCount = 5
+    // 2개의 워커를 병렬로 실행 (API Rate Limit 방지)
+    const workerCount = 2
     const workers = Array.from({ length: workerCount }, () => worker())
     
     // 모든 워커가 완료될 때까지 대기

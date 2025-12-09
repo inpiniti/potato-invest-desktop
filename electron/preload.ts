@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     tossCrawl: (ticker: string) => ipcRenderer.invoke('toss-crawl', { ticker }),
     tradingViewCrawl: (ticker: string) => ipcRenderer.invoke('tradingview-crawl', { ticker }),
     newsCrawl: (ticker: string) => ipcRenderer.invoke('news-crawl', { ticker }),
+    tradingViewList: (tickers: string[]) => ipcRenderer.invoke('tradingview-list', { tickers }),
 
     // Realtime API
     realtimeSubscribe: (params: { ticker: string; exchange: 'NAS' | 'NYS' }) => 

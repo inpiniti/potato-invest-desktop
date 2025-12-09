@@ -973,6 +973,112 @@ if (!gotTheLock) {
         }
     })
 
+    // TradingView 목록 조회 핸들러 (볼린저 밴드 + 시가총액)
+    ipcMain.handle('tradingview-list', async (_, { tickers }: { tickers: string[] }) => {
+        try {
+            console.log(`[TradingView List] 조회 시작: ${tickers.length}개 종목`)
+            
+            const url = 'https://scanner.tradingview.com/america/scan'
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    columns: [
+                        'name',           // 티커
+                        'close',          // 종가
+                        'BB.upper',       // 볼린저 밴드 상단
+                        'BB.basis',       // 볼린저 밴드 중간
+                        'BB.lower',       // 볼린저 밴드 하단
+                        'market_cap_basic', // 시가총액
+                    ],
+                    ignore_unknown_fields: false,
+                    options: { lang: 'ko' },
+                    range: [0, 99999],
+                    sort: { sortBy: 'market_cap_basic', sortOrder: 'desc' },
+                    markets: ['america'],
+                    filter: [
+                        {
+                            left: 'exchange',
+                            operation: 'in_range',
+                            right: ['NASDAQ', 'NYSE'],
+                        },
+                    ],
+                    filter2: {
+                        operator: 'and',
+                        operands: [
+                            {
+                                operation: {
+                                    operator: 'or',
+                                    operands: [
+                                        {
+                                            operation: {
+                                                operator: 'and',
+                                                operands: [
+                                                    { expression: { left: 'type', operation: 'equal', right: 'stock' } },
+                                                    { expression: { left: 'typespecs', operation: 'has', right: ['common'] } },
+                                                ],
+                                            },
+                                        },
+                                        {
+                                            operation: {
+                                                operator: 'and',
+                                                operands: [
+                                                    { expression: { left: 'type', operation: 'equal', right: 'stock' } },
+                                                    { expression: { left: 'typespecs', operation: 'has', right: ['preferred'] } },
+                                                ],
+                                            },
+                                        },
+                                        {
+                                            operation: {
+                                                operator: 'and',
+                                                operands: [
+                                                    { expression: { left: 'type', operation: 'equal', right: 'dr' } },
+                                                ],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                }),
+            })
+            
+            if (!response.ok) {
+                throw new Error(`TradingView API error: ${response.status}`)
+            }
+            
+            const data = await response.json()
+            const rawItems = data.data || []
+            
+            console.log(`[TradingView List] API 응답: ${rawItems.length}개 항목`)
+            
+            // 티커 목록으로 필터링
+            const tickerSet = new Set(tickers.map(t => t.toUpperCase()))
+            
+            const result = rawItems
+                .filter((item: any) => {
+                    const name = item.d[0]
+                    return tickerSet.has(name?.toUpperCase())
+                })
+                .map((item: any) => ({
+                    ticker: item.d[0],        // name
+                    close: item.d[1],         // close
+                    bbUpper: item.d[2],       // BB.upper
+                    bbBasis: item.d[3],       // BB.basis
+                    bbLower: item.d[4],       // BB.lower
+                    marketCap: item.d[5],     // market_cap_basic
+                }))
+            
+            console.log(`[TradingView List] 필터링 완료: ${result.length}개 종목`)
+            return result
+        } catch (error: any) {
+            console.error('[TradingView List] 오류:', error.message)
+            throw error
+        }
+    })
+
     app.whenReady().then(createWindow)
 }
     // 실시간 시세 구독 핸들러

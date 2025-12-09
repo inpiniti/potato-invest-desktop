@@ -69,6 +69,16 @@ declare global {
       } | null>
 
       newsCrawl: (ticker: string) => Promise<any[]>
+      
+      // TradingView List API (볼린저 밴드 + 시가총액)
+      tradingViewList: (tickers: string[]) => Promise<Array<{
+        ticker: string
+        close: number | null
+        bbUpper: number | null
+        bbBasis: number | null
+        bbLower: number | null
+        marketCap: number | null
+      }>>
 
       // Realtime API
       realtimeSubscribe: (params: { ticker: string; exchange: 'NAS' | 'NYS' }) => Promise<{
