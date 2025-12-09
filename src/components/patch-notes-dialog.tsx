@@ -25,6 +25,42 @@ interface PatchVersion {
 
 const versions: PatchVersion[] = [
   {
+    version: "0.0.35",
+    date: "2025-12-09",
+    title: "버그 제보 / 기능 제안 게시판 구현",
+    content: `
+### 📝 이슈 게시판 시스템 구현
+
+**주요 기능:**
+- **버그 제보**: 앱 사용 중 발견한 버그를 제보할 수 있는 게시판
+- **기능 제안**: 새로운 기능 아이디어를 제안할 수 있는 게시판
+- **CRUD 기능**: 게시글 조회, 등록, 수정, 삭제 완벽 지원
+- **댓글 시스템**: 게시글에 댓글 등록 및 삭제 가능
+- **최신순 정렬**: 가장 최근 작성된 글이 상단에 표시
+
+### 🎨 UI/UX 개선
+
+- **재사용 가능한 게시판 레이아웃**: \`BoardLayout\`, \`ListPanel\`, \`DetailPanel\` 컴포넌트화
+- **좌측 목록 / 우측 상세**: VS Code 스타일의 2단 레이아웃
+- **등록하기 버튼**: 목록 상단에 배치하여 빠른 글 작성 지원
+- **상태 배지**: 열림/닫힘 상태 표시
+
+### 🔧 기술적 상세
+
+- \`useIssueHook.ts\`: 이슈 CRUD 및 댓글 관리 훅
+- \`issue-dialog.tsx\`: 버그/기능 이슈 통합 다이얼로그
+- \`board-layout.tsx\`: 재사용 가능한 게시판 레이아웃 컴포넌트
+- \`textarea.tsx\`: shadcn/ui 스타일 Textarea 컴포넌트 추가
+- Supabase \`issues\`, \`issue_comments\` 테이블 연동
+
+### 📋 사이드바 연동
+
+- 앱 로고 클릭 → 드롭다운 메뉴에서 "버그 제보", "기능 제안" 접근
+
+⚠️ **마이그레이션 필요**: \`recreate-issues-table.sql\` 실행 (author_id를 TEXT 타입으로 변경)
+`
+  },
+  {
     version: "0.0.34",
     date: "2025-12-09",
     title: "웹소켓 실시간 구독 리팩토링 및 추세 조회 큐 시스템",

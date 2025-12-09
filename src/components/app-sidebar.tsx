@@ -27,6 +27,7 @@ import { useBalanceStore } from "@/stores/useBalanceStore"
 import { useSP500Store } from "@/stores/useSP500Store"
 import { AboutDialog } from "@/components/about-dialog"
 import { PatchNotesDialog } from "@/components/patch-notes-dialog"
+import { IssueDialog } from "@/components/issue-dialog"
 import { TrendAnalysisDialog } from "@/components/trend-analysis-dialog"
 import { Badge } from "@/components/ui/badge"
 import { useTrendStore } from "@/stores/useTrendStore"
@@ -256,6 +257,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // 트렌드 분석 다이얼로그 상태
   const [trendAnalysisOpen, setTrendAnalysisOpen] = React.useState(false)
 
+  // 버그 제보 다이얼로그 상태
+  const [bugReportOpen, setBugReportOpen] = React.useState(false)
+  
+  // 기능 제안 다이얼로그 상태
+  const [featureRequestOpen, setFeatureRequestOpen] = React.useState(false)
+
   return (
     <Sidebar
       collapsible="icon"
@@ -292,19 +299,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <Info className="mr-2 h-4 w-4" />
                     <span>About</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    // 추후 구현
-                    alert('준비 중입니다.')
-                  }}>
+                  <DropdownMenuItem onClick={() => setBugReportOpen(true)}>
                     <Bug className="mr-2 h-4 w-4" />
                     <span>버그 제보</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    // 추후 구현
-                    alert('준비 중입니다.')
-                  }}>
+                  <DropdownMenuItem onClick={() => setFeatureRequestOpen(true)}>
                     <Lightbulb className="mr-2 h-4 w-4" />
-                    <span>기능 제보</span>
+                    <span>기능 제안</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setPatchNotesOpen(true)}>
@@ -511,6 +512,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       
       {/* 트렌드 분석 다이얼로그 */}
       <TrendAnalysisDialog open={trendAnalysisOpen} onOpenChange={setTrendAnalysisOpen} />
+      
+      {/* 버그 제보 다이얼로그 */}
+      <IssueDialog open={bugReportOpen} onOpenChange={setBugReportOpen} type="bug" />
+      
+      {/* 기능 제안 다이얼로그 */}
+      <IssueDialog open={featureRequestOpen} onOpenChange={setFeatureRequestOpen} type="feature" />
     </Sidebar>
   )
 }
