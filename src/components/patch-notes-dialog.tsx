@@ -25,6 +25,59 @@ interface PatchVersion {
 
 const versions: PatchVersion[] = [
   {
+    version: "0.0.37",
+    date: "2025-12-10",
+    title: "웹소켓 싱글톤 패턴 적용 및 자동 매매 조건 개선",
+    content: `
+### 🔌 웹소켓 아키텍처 개편
+
+**주요 변경 사항:**
+- **싱글톤 패턴 적용**: 중복 연결 방지를 위해 전역 WebSocketManager 클래스로 재구성
+- **점진적 재연결 백오프**: 연결 실패 시 30초~150초 점진적 대기 시간 적용
+- **PINGPONG 응답 처리**: 서버 ping 메시지에 자동 응답하여 연결 유지
+- **electron/websocket.ts 제거**: 렌더러 직접 연결로 대체
+
+### 🤖 자동 매매 조건 개선
+
+- **매도 조건**: 하락 추세 + 현재가 > 매수가 (이익 시에만 매도)
+- **매수 조건**: 상승전환 + 현재가 < 이전 매수가 (더 싸게만 매수)
+- **첫 매수**: 가격 조건 없이 바로 진행
+
+### 🎨 UI 변경
+
+- **트레이딩 패널**: 수동 매수/매도 버튼 제거 (자동 매매만 사용)
+- **S&P 500 목록**: 시총 정렬 토글 버튼 추가 (추천 버튼 옆)
+
+**기술적 상세:**
+- \`useRealtimePrice.ts\`: WebSocketManager 싱글톤 클래스 구현
+- \`main-content.tsx\`: 자동 매매 가격 조건 로직 추가
+- \`app-sidebar.tsx\`: sortByMarketCap 상태 및 정렬 로직 추가
+`
+  },
+  {
+    version: "0.0.36",
+    date: "2025-12-09",
+    title: "TradingView 볼린저 밴드 데이터 연동",
+    content: `
+### 📊 TradingView 볼린저 밴드 연동
+
+**주요 변경 사항:**
+- **볼린저 밴드 데이터**: TradingView에서 BB(상단/중단/하단) 및 시가총액 데이터 조회
+- **매매 신호 표시**: 강력매수/매수/매도/강력매도 Badge 표시
+- **시가총액 표시**: S&P 500 목록에 시가총액($B, $T) 포맷 표시
+
+### 🔧 추세 분석 개선
+
+- **Worker 수 감소**: 동시 API 호출 5개 → 2개로 감소 (Rate Limit 방지)
+- **종목 클릭 연동**: 보유종목, 트레이딩 카드 클릭 시 상세 정보 조회
+
+**기술적 상세:**
+- \`useTradingViewHook.ts\`: 볼린저 밴드 fetch 훅
+- \`useTradingViewStore.ts\`: BB 데이터 전역 상태 관리
+- \`types/tradingview.ts\`: TradingViewBBData 타입 및 calculateBBSignal 함수
+`
+  },
+  {
     version: "0.0.35",
     date: "2025-12-09",
     title: "버그 제보 / 기능 제안 게시판 구현",
