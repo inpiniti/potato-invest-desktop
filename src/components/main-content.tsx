@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, TrendingDown, Minus, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { TrendingUp, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,18 +31,7 @@ import { calculateBBSignal } from '@/types/tradingview'
 import { useTradingViewStore } from '@/stores/useTradingViewStore'
 import { toast } from 'sonner'
 
-// 추세 메트릭에 따른 스타일 반환
-const getTrendStyle = (metric: import('@/types/trend').TrendMetric) => {
-  const { slope, accel } = metric
-  
-  if (slope >= 3) {
-    return { color: 'text-red-400', icon: TrendingUp, label: `강세(${slope}/${accel})` }
-  } else if (slope <= 1) {
-    return { color: 'text-blue-400', icon: TrendingDown, label: `약세(${slope}/${accel})` }
-  } else {
-    return { color: 'text-gray-400', icon: Minus, label: `보합(${slope}/${accel})` }
-  }
-}
+
 
 interface TradingCardProps {
   trading: TradingListItem
@@ -198,41 +187,51 @@ const TradingCard = ({
       return
     }
 
-    // 매도 로직: 가속도가 0이 아니었다가 0이 된 경우
-    if (openPositions.length > 0 && prevTrend.ma20.accel !== 0 && trend.ma20.accel === 0) {
-      // 🔒 가격 조건 체크: 현재가가 매수가보다 높은 포지션만 매도 가능
-      const profitablePosition = openPositions.find(p => currentPrice > p.buyPrice)
-      
-      if (profitablePosition) {
-        setAutoTradeStatus('selling')
-        console.log(`🤖 [자동매도] ${trading.ticker} - 가속도 0 도달 (가속도: ${prevTrend.ma20.accel} -> ${trend.ma20.accel})`)
-        onAutoTrade(trading.ticker, currentPrice, 'sell')
-        setLastAutoTradeTime(now)
-        setTimeout(() => setAutoTradeStatus('idle'), 5000)
-      }
+    // ------------------------------------------
+    // Auto Trading Logic (Minute Trend - 10 Points)
+    // ------------------------------------------
+
+    // 매수 조건: 기울기 3~6, 가속도 7~8
+    const isBuySignal = (s: number, a: number) => {
+      return (s >= 3 && s <= 6) && (a >= 7 && a <= 8)
+    }
+
+    // 매도 조건: 기울기 3~6, 가속도 0~1
+    const isSellSignal = (s: number, a: number) => {
+      return (s >= 3 && s <= 6) && (a >= 0 && a <= 1)
+    }
+
+    // MA20 기준 신호 확인 (분봉)
+    const ma20Slope = trend.ma20.slope  // 0 ~ 9
+    const ma20Accel = trend.ma20.accel  // 0 ~ 8
+
+    // 매도 로직
+    if (openPositions.length > 0 && isSellSignal(ma20Slope, ma20Accel)) {
+      // 🔒 매도
+      setAutoTradeStatus('selling')
+      console.log(`🤖 [자동매도] ${trading.ticker} - 매도 신호 발생 (Slope:${ma20Slope}, Accel:${ma20Accel})`)
+      onAutoTrade(trading.ticker, currentPrice, 'sell')
+      setLastAutoTradeTime(now)
+      setTimeout(() => setAutoTradeStatus('idle'), 5000)
       return
     }
 
-    // 매수 로직: 가속도가 3이 아니었다가 3이 된 경우
-    if (prevTrend.ma20.accel !== 3 && trend.ma20.accel === 3) {
-      // 🔒 가격 조건 체크: 미체결 포지션이 있으면 가장 최근 매수가보다 싸야 함
+    // 매수 로직
+    if (isBuySignal(ma20Slope, ma20Accel)) {
+      // 🔒 가격 조건 체크
       if (openPositions.length > 0) {
-        // 가장 최근 매수한 미체결 포지션 (buyTime 기준 정렬)
         const sortedPositions = [...openPositions].sort((a, b) => 
           new Date(b.buyTime).getTime() - new Date(a.buyTime).getTime()
         )
         const lastBuyPrice = sortedPositions[0].buyPrice
         
         if (currentPrice >= lastBuyPrice) {
-          console.log(`⏸️ [매수 보류] ${trading.ticker} - 가속도 3이지만 가격이 높음 (현재가: $${currentPrice.toFixed(2)} >= 이전매수가: $${lastBuyPrice.toFixed(2)})`)
+          console.log(`⏸️ [매수 보류] ${trading.ticker} - 매수 신호지만 가격이 높음 (현재가: $${currentPrice.toFixed(2)} >= 이전매수가: $${lastBuyPrice.toFixed(2)})`)
           return
         }
-        
-        console.log(`🤖 [자동매수] ${trading.ticker} - 가속도 3 진입 + 저가 조건 충족`)
-      } else {
-        console.log(`🤖 [자동매수] ${trading.ticker} - 가속도 3 진입 (첫 매수)`)
       }
       
+      console.log(`🤖 [자동매수] ${trading.ticker} - 매수 신호 발생 (Slope:${ma20Slope}, Accel:${ma20Accel})`)
       setAutoTradeStatus('buying')
       onAutoTrade(trading.ticker, currentPrice, 'buy')
       setLastAutoTradeTime(now)
@@ -282,12 +281,25 @@ const TradingCard = ({
                   <div className="flex gap-0.5">
                     {(['ma20', 'ma50', 'ma100', 'ma200'] as const).map((maKey) => {
                       const metric = dailyTrend[maKey]
-                      const isUp = metric.slope >= 3
-                      const isDown = metric.slope <= 1
-                      const bgColor = isUp ? 'bg-red-500' : isDown ? 'bg-blue-500' : 'bg-gray-400'
+                      const { slope } = metric
+                      let bgColor = 'bg-gray-400'
+
+                      // 1. 빨강 (Red): 기울기 3, 4
+                      if (slope >= 3) {
+                        bgColor = 'bg-red-500'
+                      }
+                      // 2. 파랑 (Blue): 기울기 0, 1
+                      else if (slope <= 1) {
+                        bgColor = 'bg-blue-500'
+                      }
+                      // 3. 회색 (Gray): 기울기 2
+                      else {
+                        bgColor = 'bg-gray-400'
+                      }
+
                       return (
                         <Badge key={maKey} className={`h-4 px-1 text-[10px] ${bgColor} text-white`}>
-                          {maKey.replace('ma', '')} ({metric.slope}/{metric.accel})
+                          {maKey.replace('ma', '')} ({metric.slope},{metric.accel})
                         </Badge>
                       )
                     })}
@@ -333,13 +345,27 @@ const TradingCard = ({
               {trend ? (
                 <>
                   {(['ma20', 'ma50', 'ma100', 'ma200'] as const).map((maKey) => {
-                    const style = getTrendStyle(trend[maKey])
-                    const Icon = style.icon
+                    const metric = trend[maKey]
+                    const { slope, accel } = metric
+                    let bgColor = 'bg-gray-400'
+
+                      // 1. 빨강 (Buy Signal): 기울기 3~6, 가속도 7~8
+                      if ((slope >= 3 && slope <= 6) && (accel >= 7 && accel <= 8)) {
+                        bgColor = 'bg-red-500'
+                      }
+                      // 2. 파랑 (Sell Signal): 기울기 3~6, 가속도 0~1
+                      else if ((slope >= 3 && slope <= 6) && (accel >= 0 && accel <= 1)) {
+                        bgColor = 'bg-blue-500'
+                      }
+                      // 3. 회색: 나머지
+                      else {
+                        bgColor = 'bg-gray-400'
+                      }
+
                     return (
-                      <div key={maKey} className={`flex items-center gap-0.5 ${style.color}`}>
-                        <Icon className="h-3 w-3" />
-                        <span className="text-[10px]">{maKey.toUpperCase().replace('MA', '')}</span>
-                      </div>
+                      <Badge key={maKey} className={`h-4 px-1 text-[10px] ${bgColor} text-white`}>
+                        {maKey.replace('ma', '')} ({slope},{accel})
+                      </Badge>
                     )
                   })}
                 </>

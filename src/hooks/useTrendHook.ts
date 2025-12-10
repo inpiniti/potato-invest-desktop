@@ -194,6 +194,57 @@ export function useTrendHook() {
    * @param params ticker와 exchange를 포함한 파라미터
    * @returns Trend 객체
    */
+  // 10개 데이터 포인트를 분석하는 함수 (분봉용)
+  const calculateTrendMetrics10 = (mas: (number | null)[]): import('@/types/trend').TrendMetric => {
+    // null 값이 있으면 기본값 반환
+    if (mas.some(ma => ma === null)) {
+      return {
+        value: 0,
+        slope: 0,
+        accel: 0,
+        description: '데이터 부족'
+      }
+    }
+
+    const validMas = mas as number[]
+    const current = validMas[0]
+
+    // 1. 기울기 (Slope) 계산
+    // 10개 데이터 -> 9개의 구간
+    const slopes: number[] = []
+    for (let i = 0; i < 9; i++) {
+      slopes.push(validMas[i] - validMas[i + 1])
+    }
+
+    // 기울기 점수: 양수인 구간의 개수 (0 ~ 9)
+    const slopeScore = slopes.filter(s => s > 0).length
+
+    // 2. 가속도 (Acceleration) 계산
+    // 9개의 기울기 -> 8개의 구간
+    const accels: number[] = []
+    for (let i = 0; i < 8; i++) {
+      accels.push(slopes[i] - slopes[i + 1])
+    }
+
+    // 가속도 점수: 양수인 구간의 개수 (0 ~ 8)
+    const accelScore = accels.filter(a => a > 0).length
+
+    // 3. 설명 (간단히 처리)
+    let description = `분봉 분석 (Slope: ${slopeScore}/9, Accel: ${accelScore}/8)`
+
+    return {
+      value: current,
+      slope: slopeScore,
+      accel: accelScore,
+      description
+    }
+  }
+
+  /**
+   * 분봉 데이터 기반 이동평균 추세 분석
+   * @param params ticker와 exchange를 포함한 파라미터
+   * @returns Trend 객체
+   */
   const getTrendMinutes = async ({ ticker, exchange }: GetTrendParams): Promise<Trend> => {
     setLoading(true)
     setError(null)
@@ -202,31 +253,31 @@ export function useTrendHook() {
       // 분봉 시세 데이터 조회 (240개)
       const minuteData = await getMinutes({ ticker, exchange })
 
-      if (minuteData.length < 205) {
-        throw new Error(`데이터가 부족합니다. (필요: 205개, 현재: ${minuteData.length}개)`)
+      if (minuteData.length < 210) { // 10개 MA 계산을 위해 조금 더 여유있게
+        throw new Error(`데이터가 부족합니다. (필요: 210개 이상, 현재: ${minuteData.length}개)`)
       }
 
-      // 각 이동평균선의 최근 5개 값 계산
+      // 각 이동평균선의 최근 10개 값 계산
       const ma20Values: (number | null)[] = []
       const ma50Values: (number | null)[] = []
       const ma100Values: (number | null)[] = []
       const ma200Values: (number | null)[] = []
 
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 10; i++) {
         ma20Values.push(calculateMAMinute(minuteData, 20, i))
         ma50Values.push(calculateMAMinute(minuteData, 50, i))
         ma100Values.push(calculateMAMinute(minuteData, 100, i))
         ma200Values.push(calculateMAMinute(minuteData, 200, i))
       }
 
-      // 추세 판단
+      // 추세 판단 - 10개 데이터 분석 함수 사용
       const trend: Trend = {
         ticker,
         exchange,
-        ma20: calculateTrendMetrics(ma20Values),
-        ma50: calculateTrendMetrics(ma50Values),
-        ma100: calculateTrendMetrics(ma100Values),
-        ma200: calculateTrendMetrics(ma200Values),
+        ma20: calculateTrendMetrics10(ma20Values),
+        ma50: calculateTrendMetrics10(ma50Values),
+        ma100: calculateTrendMetrics10(ma100Values),
+        ma200: calculateTrendMetrics10(ma200Values),
       }
 
       return trend

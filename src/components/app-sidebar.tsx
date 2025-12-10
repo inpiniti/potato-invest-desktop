@@ -172,12 +172,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       )
     }
 
-    // 추천 필터 (4개 MA 모두 상승 또는 상승전환)
+    // 추천 필터 (4개 MA 모두 상승세: 기울기 3 이상)
     if (recommendedOnly) {
       result = result.filter(stock => {
         const trend = getTrendByTicker(stock.ticker)
         if (!trend) return false
-        const isUpTrend = (t: string) => t === '상승' || t === '상승전환'
+        
+        // 상승세 조건: 기울기 3 이상
+        const isUpTrend = (m: import('@/types/trend').TrendMetric) => m.slope >= 3
         return isUpTrend(trend.ma20) && isUpTrend(trend.ma50) && isUpTrend(trend.ma100) && isUpTrend(trend.ma200)
       })
     }
@@ -209,29 +211,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return num.toLocaleString('ko-KR', { maximumFractionDigits: 2 })
   }
 
-  // 추세에 따른 Badge variant와 스타일 결정
-  const getTrendBadgeStyle = (trendType: string) => {
-    const isTransition = trendType.includes('전환')
+  // 추세에 따른 Badge variant와 스타일 결정 (일별: 기울기 기준)
+  const getTrendBadgeStyle = (metric: import('@/types/trend').TrendMetric) => {
+    const { slope } = metric
     
-    switch (trendType) {
-      case '상승':
-      case '상승전환':
-        return {
-          className: `h-4 px-1 text-[10px] bg-red-500 text-white hover:bg-red-600 ${isTransition ? 'ring-2 ring-red-300' : ''}`,
-          variant: 'destructive' as const
-        }
-      case '하락':
-      case '하락전환':
-        return {
-          className: `h-4 px-1 text-[10px] bg-blue-500 text-white hover:bg-blue-600 ${isTransition ? 'ring-2 ring-blue-300' : ''}`,
-          variant: 'default' as const
-        }
-      case '유지':
-      default:
-        return {
-          className: 'h-4 px-1 text-[10px] bg-gray-400 text-white hover:bg-gray-500',
-          variant: 'secondary' as const
-        }
+    // 1. 빨강 (Red): 기울기 3, 4
+    if (slope >= 3) {
+      return {
+        className: 'h-4 px-1 text-[10px] bg-red-500 text-white hover:bg-red-600',
+        variant: 'destructive' as const
+      }
+    }
+    
+    // 2. 파랑 (Blue): 기울기 0, 1
+    if (slope <= 1) {
+      return {
+        className: 'h-4 px-1 text-[10px] bg-blue-500 text-white hover:bg-blue-600',
+        variant: 'default' as const
+      }
+    }
+    
+    // 3. 회색 (Gray): 기울기 2
+    return {
+      className: 'h-4 px-1 text-[10px] bg-gray-400 text-white hover:bg-gray-500',
+      variant: 'secondary' as const
     }
   }
 
@@ -543,22 +546,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           <Badge 
                             {...(trend ? getTrendBadgeStyle(trend.ma20) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
                           >
-                            20
+                            {trend ? `20 (${trend.ma20.slope},${trend.ma20.accel})` : '20'}
                           </Badge>
                           <Badge 
                             {...(trend ? getTrendBadgeStyle(trend.ma50) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
                           >
-                            50
+                            {trend ? `50 (${trend.ma50.slope},${trend.ma50.accel})` : '50'}
                           </Badge>
                           <Badge 
                             {...(trend ? getTrendBadgeStyle(trend.ma100) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
                           >
-                            100
+                            {trend ? `100 (${trend.ma100.slope},${trend.ma100.accel})` : '100'}
                           </Badge>
                           <Badge 
                             {...(trend ? getTrendBadgeStyle(trend.ma200) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
                           >
-                            200
+                            {trend ? `200 (${trend.ma200.slope},${trend.ma200.accel})` : '200'}
                           </Badge>
                           {/* 종가 표시 */}
                           {bbData?.close && (
