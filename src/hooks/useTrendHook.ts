@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Trend, TrendType } from '@/types/trend'
+import type { Trend } from '@/types/trend'
 import type { Daily } from '@/types/daily'
 import type { Minute } from '@/types/minute'
 import { useKoreainvestmentHook } from './useKoreainvestmentHook'
@@ -72,46 +72,70 @@ export function useTrendHook() {
    * @param mas 최근 5개의 이동평균 값 (0번째가 최신)
    * @returns 추세 타입
    */
-  const determineTrend = (mas: (number | null)[]): TrendType => {
-    // null 값이 있으면 '유지'로 처리
+  /**
+   * 추세 지표 계산 (기울기, 가속도)
+   * @param mas 최근 5개의 이동평균 값 (0번째가 최신)
+   * @returns 추세 지표 객체
+   */
+  const calculateTrendMetrics = (mas: (number | null)[]): import('@/types/trend').TrendMetric => {
+    // null 값이 있으면 기본값 반환
     if (mas.some(ma => ma === null)) {
-      return '유지'
-    }
-
-    const validMas = mas as number[]
-
-    // 현재(0번째) 이동평균
-    const current = validMas[0]
-    
-    // 최근 4개(1~4번째)의 이동평균 추세 분석
-    const recentTrends = []
-    for (let i = 1; i < 5; i++) {
-      if (validMas[i] > validMas[i - 1]) {
-        recentTrends.push('상승')
-      } else if (validMas[i] < validMas[i - 1]) {
-        recentTrends.push('하락')
-      } else {
-        recentTrends.push('유지')
+      return {
+        value: 0,
+        slope: 0,
+        accel: 0,
+        description: '데이터 부족'
       }
     }
 
-    // 현재의 추세
-    const currentTrend = current > validMas[1] ? '상승' : current < validMas[1] ? '하락' : '유지'
+    const validMas = mas as number[]
+    const current = validMas[0]
 
-    // 최근 4개가 모두 하락이었는데 현재 상승 또는 유지로 전환
-    const allRecentDown = recentTrends.every(t => t === '하락')
-    if (allRecentDown && (currentTrend === '상승' || currentTrend === '유지')) {
-      return '상승전환'
+    // 1. 기울기 (Slope) 계산
+    // 5일치 데이터 -> 4개의 구간
+    // [오늘-1일전, 1일전-2일전, 2일전-3일전, 3일전-4일전]
+    const slopes: number[] = []
+    for (let i = 0; i < 4; i++) {
+      slopes.push(validMas[i] - validMas[i + 1])
     }
 
-    // 최근 4개가 모두 상승이었는데 현재 하락 또는 유지로 전환
-    const allRecentUp = recentTrends.every(t => t === '상승')
-    if (allRecentUp && (currentTrend === '하락' || currentTrend === '유지')) {
-      return '하락전환'
+    // 기울기 점수: 양수인 구간의 개수 (0 ~ 4)
+    const slopeScore = slopes.filter(s => s > 0).length
+
+    // 2. 가속도 (Acceleration) 계산
+    // 4개의 기울기 -> 3개의 구간
+    // [(오늘-1일전)-(1일전-2일전), ...]
+    const accels: number[] = []
+    for (let i = 0; i < 3; i++) {
+      accels.push(slopes[i] - slopes[i + 1])
     }
 
-    // 일반적인 추세
-    return currentTrend
+    // 가속도 점수: 양수인 구간의 개수 (0 ~ 3)
+    const accelScore = accels.filter(a => a > 0).length
+
+    // 3. 설명 생성
+    let description = ''
+    if (slopeScore === 4 && accelScore >= 2) {
+      description = '주가가 급등하고 있습니다. 강력 매수를 추천합니다.'
+    } else if (slopeScore === 4 && accelScore === 0) {
+      description = '고점징후가 보입니다. 매도를 추천합니다.'
+    } else if (slopeScore === 0 && accelScore === 0) {
+      description = '주가가 급락하고 있습니다. 강력 매도를 추천합니다.'
+    } else if (slopeScore === 0 && accelScore === 3) {
+      description = '바닥을 다지는 중입니다. 매수를 추천합니다.'
+    } else {
+      // 그 외 중간 상태에 대한 일반적인 설명
+      if (slopeScore >= 3) description = '상승 추세가 이어지고 있습니다.'
+      else if (slopeScore <= 1) description = '하락 추세가 이어지고 있습니다.'
+      else description = '추세가 횡보하거나 전환되는 중입니다.'
+    }
+
+    return {
+      value: current,
+      slope: slopeScore,
+      accel: accelScore,
+      description
+    }
   }
 
   /**
@@ -148,10 +172,10 @@ export function useTrendHook() {
       const trend: Trend = {
         ticker,
         exchange,
-        ma20: determineTrend(ma20Values),
-        ma50: determineTrend(ma50Values),
-        ma100: determineTrend(ma100Values),
-        ma200: determineTrend(ma200Values),
+        ma20: calculateTrendMetrics(ma20Values),
+        ma50: calculateTrendMetrics(ma50Values),
+        ma100: calculateTrendMetrics(ma100Values),
+        ma200: calculateTrendMetrics(ma200Values),
       }
 
       return trend
@@ -199,10 +223,10 @@ export function useTrendHook() {
       const trend: Trend = {
         ticker,
         exchange,
-        ma20: determineTrend(ma20Values),
-        ma50: determineTrend(ma50Values),
-        ma100: determineTrend(ma100Values),
-        ma200: determineTrend(ma200Values),
+        ma20: calculateTrendMetrics(ma20Values),
+        ma50: calculateTrendMetrics(ma50Values),
+        ma100: calculateTrendMetrics(ma100Values),
+        ma200: calculateTrendMetrics(ma200Values),
       }
 
       return trend
