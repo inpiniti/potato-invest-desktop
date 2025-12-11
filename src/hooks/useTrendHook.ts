@@ -72,9 +72,12 @@ export function useTrendHook() {
    * @param mas 최근 5개의 이동평균 값 (0번째가 최신)
    * @returns 추세 타입
    */
-  /**
-   * 추세 지표 계산 (기울기, 가속도)
-   * @param mas 최근 5개의 이동평균 값 (0번째가 최신)
+   /**
+   * 추세 지표 계산 (공통)
+   * 기울기: (현재 - 과거) / 과거 * 100 (비율)
+   * 가속도: 현재기울기 - 과거기울기
+   * 반환값: 각 항목의 합산
+   * @param mas 이동평균 값 배열 (0번째가 최신)
    * @returns 추세 지표 객체
    */
   const calculateTrendMetrics = (mas: (number | null)[]): import('@/types/trend').TrendMetric => {
@@ -91,49 +94,69 @@ export function useTrendHook() {
     const validMas = mas as number[]
     const current = validMas[0]
 
-    // 1. 기울기 (Slope) 계산
-    // 5일치 데이터 -> 4개의 구간
-    // [오늘-1일전, 1일전-2일전, 2일전-3일전, 3일전-4일전]
+    // 1. 기울기 (Slope) 비율 계산
+    // 식: (현재 - 과거) / 과거 * 100
     const slopes: number[] = []
-    for (let i = 0; i < 4; i++) {
-      slopes.push(validMas[i] - validMas[i + 1])
+    for (let i = 0; i < validMas.length - 1; i++) {
+        const curr = validMas[i]
+        const prev = validMas[i + 1]
+        
+        // 0으로 나누기 방지
+        if (prev === 0) {
+            slopes.push(0)
+        } else {
+            slopes.push(((curr - prev) / prev) * 100)
+        }
     }
 
-    // 기울기 점수: 양수인 구간의 개수 (0 ~ 4)
-    const slopeScore = slopes.filter(s => s > 0).length
-
     // 2. 가속도 (Acceleration) 계산
-    // 4개의 기울기 -> 3개의 구간
-    // [(오늘-1일전)-(1일전-2일전), ...]
+    // 식: 현재기울기 - 과거기울기
     const accels: number[] = []
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < slopes.length - 1; i++) {
       accels.push(slopes[i] - slopes[i + 1])
     }
 
-    // 가속도 점수: 양수인 구간의 개수 (0 ~ 3)
-    const accelScore = accels.filter(a => a > 0).length
+    // 3. 합산 (User Request: 합산을 리턴)
+    const slopeSum = slopes.reduce((sum, val) => sum + val, 0)
+    const accelSum = accels.reduce((sum, val) => sum + val, 0)
 
-    // 3. 설명 생성
+    // 4. 설명 생성
+    // Slope: + 상승, - 하락, 0 박스권
+    // Accel: + 상승추세변화(가속/반등), - 하락추세변화(둔화/낙폭확대), 0 변화없음
     let description = ''
-    if (slopeScore === 4 && accelScore >= 2) {
-      description = '주가가 급등하고 있습니다. 강력 매수를 추천합니다.'
-    } else if (slopeScore === 4 && accelScore === 0) {
-      description = '고점징후가 보입니다. 매도를 추천합니다.'
-    } else if (slopeScore === 0 && accelScore === 0) {
-      description = '주가가 급락하고 있습니다. 강력 매도를 추천합니다.'
-    } else if (slopeScore === 0 && accelScore === 3) {
-      description = '바닥을 다지는 중입니다. 매수를 추천합니다.'
+    
+    // 부동소수점 오차 고려하여 0 판단
+    const isSlopeFlat = Math.abs(slopeSum) < 0.000001
+    const isAccelFlat = Math.abs(accelSum) < 0.000001
+
+    if (isSlopeFlat) {
+        description = '박스권 횡보'
+    } else if (slopeSum > 0) {
+        description = '상승 추세'
     } else {
-      // 그 외 중간 상태에 대한 일반적인 설명
-      if (slopeScore >= 3) description = '상승 추세가 이어지고 있습니다.'
-      else if (slopeScore <= 1) description = '하락 추세가 이어지고 있습니다.'
-      else description = '추세가 횡보하거나 전환되는 중입니다.'
+        description = '하락 추세'
+    }
+
+    if (!isAccelFlat) {
+        if (accelSum > 0) {
+            // 가속도가 + 인 경우
+            if (slopeSum > 0) description += ' (상승폭 확대)'
+            else if (slopeSum < 0) description += ' (하락폭 축소/반등 시도)'
+            else description += ' (상승 전환 시도)'
+        } else {
+            // 가속도가 - 인 경우
+            if (slopeSum > 0) description += ' (상승폭 둔화)'
+            else if (slopeSum < 0) description += ' (하락폭 확대)'
+            else description += ' (하락 전환 시도)'
+        }
+    } else {
+        description += ' (모멘텀 유지)'
     }
 
     return {
       value: current,
-      slope: slopeScore,
-      accel: accelScore,
+      slope: slopeSum,
+      accel: accelSum,
       description
     }
   }
@@ -194,57 +217,6 @@ export function useTrendHook() {
    * @param params ticker와 exchange를 포함한 파라미터
    * @returns Trend 객체
    */
-  // 10개 데이터 포인트를 분석하는 함수 (분봉용)
-  const calculateTrendMetrics10 = (mas: (number | null)[]): import('@/types/trend').TrendMetric => {
-    // null 값이 있으면 기본값 반환
-    if (mas.some(ma => ma === null)) {
-      return {
-        value: 0,
-        slope: 0,
-        accel: 0,
-        description: '데이터 부족'
-      }
-    }
-
-    const validMas = mas as number[]
-    const current = validMas[0]
-
-    // 1. 기울기 (Slope) 계산
-    // 10개 데이터 -> 9개의 구간
-    const slopes: number[] = []
-    for (let i = 0; i < 9; i++) {
-      slopes.push(validMas[i] - validMas[i + 1])
-    }
-
-    // 기울기 점수: 양수인 구간의 개수 (0 ~ 9)
-    const slopeScore = slopes.filter(s => s > 0).length
-
-    // 2. 가속도 (Acceleration) 계산
-    // 9개의 기울기 -> 8개의 구간
-    const accels: number[] = []
-    for (let i = 0; i < 8; i++) {
-      accels.push(slopes[i] - slopes[i + 1])
-    }
-
-    // 가속도 점수: 양수인 구간의 개수 (0 ~ 8)
-    const accelScore = accels.filter(a => a > 0).length
-
-    // 3. 설명 (간단히 처리)
-    let description = `분봉 분석 (Slope: ${slopeScore}/9, Accel: ${accelScore}/8)`
-
-    return {
-      value: current,
-      slope: slopeScore,
-      accel: accelScore,
-      description
-    }
-  }
-
-  /**
-   * 분봉 데이터 기반 이동평균 추세 분석
-   * @param params ticker와 exchange를 포함한 파라미터
-   * @returns Trend 객체
-   */
   const getTrendMinutes = async ({ ticker, exchange }: GetTrendParams): Promise<Trend> => {
     setLoading(true)
     setError(null)
@@ -274,10 +246,10 @@ export function useTrendHook() {
       const trend: Trend = {
         ticker,
         exchange,
-        ma20: calculateTrendMetrics10(ma20Values),
-        ma50: calculateTrendMetrics10(ma50Values),
-        ma100: calculateTrendMetrics10(ma100Values),
-        ma200: calculateTrendMetrics10(ma200Values),
+        ma20: calculateTrendMetrics(ma20Values),
+        ma50: calculateTrendMetrics(ma50Values),
+        ma100: calculateTrendMetrics(ma100Values),
+        ma200: calculateTrendMetrics(ma200Values),
       }
 
       return trend

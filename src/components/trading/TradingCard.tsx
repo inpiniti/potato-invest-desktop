@@ -169,14 +169,14 @@ export const TradingCard = ({
     // Auto Trading Logic (Minute Trend - 10 Points)
     // ------------------------------------------
 
-    // 매수 조건: 기울기 3~6, 가속도 7~8
+    // 매수 조건: 상승 추세이고 가속도가 양수 (상승폭 확대)
     const isBuySignal = (s: number, a: number) => {
-      return (s >= 3 && s <= 6) && (a >= 7 && a <= 8)
+      return s > 0 && a > 0
     }
 
-    // 매도 조건: 기울기 3~6, 가속도 0~1
+    // 매도 조건: 상승 추세지만 가속도가 음수 (상승둔화/고점징후)
     const isSellSignal = (s: number, a: number) => {
-      return (s >= 3 && s <= 6) && (a >= 0 && a <= 1)
+      return s > 0 && a < 0
     }
 
     // MA20 기준 신호 확인 (분봉)
@@ -187,7 +187,7 @@ export const TradingCard = ({
     if (openPositions.length > 0 && isSellSignal(ma20Slope, ma20Accel)) {
       // 🔒 매도
       setAutoTradeStatus('selling')
-      console.log(`🤖 [자동매도] ${trading.ticker} - 매도 신호 발생 (Slope:${ma20Slope}, Accel:${ma20Accel})`)
+      console.log(`🤖 [자동매도] ${trading.ticker} - 매도 신호 발생 (Slope:${ma20Slope.toFixed(2)}%, Accel:${ma20Accel.toFixed(2)}%)`)
       onAutoTrade(trading.ticker, currentPrice, 'sell')
       setLastAutoTradeTime(now)
       setTimeout(() => setAutoTradeStatus('idle'), 5000)
@@ -209,7 +209,7 @@ export const TradingCard = ({
         }
       }
       
-      console.log(`🤖 [자동매수] ${trading.ticker} - 매수 신호 발생 (Slope:${ma20Slope}, Accel:${ma20Accel})`)
+      console.log(`🤖 [자동매수] ${trading.ticker} - 매수 신호 발생 (Slope:${ma20Slope.toFixed(2)}%, Accel:${ma20Accel.toFixed(2)}%)`)
       setAutoTradeStatus('buying')
       onAutoTrade(trading.ticker, currentPrice, 'buy')
       setLastAutoTradeTime(now)
@@ -262,22 +262,22 @@ export const TradingCard = ({
                       const { slope } = metric
                       let bgColor = 'bg-gray-400'
 
-                      // 1. 빨강 (Red): 기울기 3, 4
-                      if (slope >= 3) {
+                      // 1. 빨강 (Red): 상승 (Slope > 0)
+                      if (slope > 0) {
                         bgColor = 'bg-red-500'
                       }
-                      // 2. 파랑 (Blue): 기울기 0, 1
-                      else if (slope <= 1) {
+                      // 2. 파랑 (Blue): 하락 (Slope < 0)
+                      else if (slope < 0) {
                         bgColor = 'bg-blue-500'
                       }
-                      // 3. 회색 (Gray): 기울기 2
+                      // 3. 회색 (Gray): 횡보
                       else {
                         bgColor = 'bg-gray-400'
                       }
 
                       return (
                         <Badge key={maKey} className={`h-4 px-1 text-[10px] ${bgColor} text-white`}>
-                          {maKey.replace('ma', '')} ({metric.slope},{metric.accel})
+                          {maKey.replace('ma', '')} ({metric.slope.toFixed(2)}%,{metric.accel.toFixed(2)}%)
                         </Badge>
                       )
                     })}
@@ -327,12 +327,13 @@ export const TradingCard = ({
                     const { slope, accel } = metric
                     let bgColor = 'bg-gray-400'
 
-                      // 1. 빨강 (Buy Signal): 기울기 3~6, 가속도 7~8
-                      if ((slope >= 3 && slope <= 6) && (accel >= 7 && accel <= 8)) {
+                      // 1. 빨강 (Buy Signal): 상승 가속
+                      if (slope > 0 && accel > 0) {
                         bgColor = 'bg-red-500'
                       }
-                      // 2. 파랑 (Sell Signal): 기울기 3~6, 가속도 0~1
-                      else if ((slope >= 3 && slope <= 6) && (accel >= 0 && accel <= 1)) {
+                      // 2. 파랑 (Sell Signal): 상승 둔화 (고점 징후) 
+                      // 또는 하락 가속 (accel < 0) - 여기서는 단순화하여 accel < 0을 파랑으로 표시할 수도 있음
+                      else if (accel < 0) {
                         bgColor = 'bg-blue-500'
                       }
                       // 3. 회색: 나머지
@@ -342,7 +343,7 @@ export const TradingCard = ({
 
                     return (
                       <Badge key={maKey} className={`h-4 px-1 text-[10px] ${bgColor} text-white`}>
-                        {maKey.replace('ma', '')} ({slope},{accel})
+                        {maKey.replace('ma', '')} ({slope.toFixed(2)}%,{accel.toFixed(2)}%)
                       </Badge>
                     )
                   })}

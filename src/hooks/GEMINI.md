@@ -173,7 +173,7 @@
 
 - **Internal Logic**
   - `calculateMADaily`, `calculateMAMinute`: 이동평균 계산
-  - `calculateTrendMetrics`: 기울기 및 가속도 점수 계산하여 매수/매도 시그널 생성
+  - `calculateTrendMetrics`: 기울기 및 가속도를 백분율(%)로 변환 후 합산하여 추세 강도 및 방향 계산
 
 - **Effects (useEffect)**
   - 없음

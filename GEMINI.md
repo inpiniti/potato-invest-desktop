@@ -77,7 +77,8 @@
 
 # 작업 완료 후 사용하는 프롬프트
 ```
-작업한 내용 패치노트(patch-notes-dialog.tsx)에 정리해줘
+작업한 내용(아직 git add로 스테이징 되지 않은 파일) 패치노트(patch-notes-dialog.tsx)에 정리해줘
+package.json에 버전 변경도 부탁해
 혹시나 추가 또는 변경된 컴포넌트, 훅, 라이브러리, 저장소, 타입, 레이아웃 등이 있으면
 룰 문서(GEMINI.md)에 정리해줘
 컴포넌트: /src/components/GEMINI.md
@@ -87,7 +88,7 @@
 타입: /src/types/GEMINI.md
 레이아웃: /src/GEMINI.md
 ipc: /electron/GEMINI.md
-커밋메시지도 작성해줘
+커밋메시지도 작성 및 커밋까지 진행해줘
 ```
 
 # 리팩토링 가능한 여부가 있는지 확인
@@ -107,6 +108,72 @@ ipc: /electron/GEMINI.md
 2. 가격변동이 일어난 종목의 분봉차트 조회 및 분봉 추세 분석
 3. 분석을 기반으로 매매 결정
 4. 트레이딩 기록
+```
+
+# 분봉 추세 알고리즘
+```
+아래와 같이 리턴됨
+{
+  ticker,
+  exchange,
+  ma20: {
+    value: current, // 이평선
+    slope: slopeScore, // 기울기
+    accel: accelScore, // 가속도
+    description
+  },
+  ma50: {
+    value: current, // 이평선
+    slope: slopeScore, // 기울기
+    accel: accelScore, // 가속도
+    description
+  },
+  ma100: {
+    value: current, // 이평선
+    slope: slopeScore, // 기울기
+    accel: accelScore, // 가속도
+    description
+  },
+  ma200: {
+    value: current, // 이평선
+    slope: slopeScore, // 기울기
+    accel: accelScore, // 가속도
+    description
+  },
+}
+
+이평선은 단순 총합 / 갯수로 계산
+기울기는 기준일 - 전날의 이평선으로 계산 (기울기라기 보다 차이값?)
+가속도는 기준일 - 전날의 기울기로 계산
+
+기울기의 문제점은 단가가 높은 종목이 기울기가 높고 단가가 낮은 종목이 단가가 낮게됨
+가속도는 역시 마찬가지일 확률이 높음
+
+물런 현재는 빈도를 리턴을 하고 있어 문제 자체가 있는건 아닌데,
+강도가 어느정도인지는 알기 어렵다.
+
+가령 1원씩 5번 오르고 100원씩 1번 빠지면,
+빈도로하면 상승같아보이지만, 실제로는 하락이다.
+
+여튼 그래서 나는 강도가 보였으면 좋겠다.
+
+useTendHook 코드를 참조바람
+
+
+암튼 그래서 slope를 %로 계산을 하고,
+그 합산을 리턴
+
+ slope이 비율로 나오면 accel 계산도 비율이 될것이다.
+accel로 합산해서 리턴 하도록 만들고 싶다.
+
+
+그렇게 되면 기울가 0은 박스권, + 상승, - 하락 구간 이라는걸 알수 있을것 같고,
+accel의 경우는 0은 추세에 변환이 없고, +는 상승추세로 변화하고 있다.
+-는 하락추세로 변화하려고 하고 있다
+
+라는걸 알수 있지 않을까?
+
+내말이 맞나?
 ```
 
 ## 📋 프로젝트 소개

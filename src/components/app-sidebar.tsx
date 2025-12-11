@@ -178,8 +178,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         const trend = getTrendByTicker(stock.ticker)
         if (!trend) return false
         
-        // 상승세 조건: 기울기 3 이상
-        const isUpTrend = (m: import('@/types/trend').TrendMetric) => m.slope >= 3
+        // 상승세 조건: 기울기 양수
+        const isUpTrend = (m: import('@/types/trend').TrendMetric) => m.slope > 0
         return isUpTrend(trend.ma20) && isUpTrend(trend.ma50) && isUpTrend(trend.ma100) && isUpTrend(trend.ma200)
       })
     }
@@ -215,23 +215,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const getTrendBadgeStyle = (metric: import('@/types/trend').TrendMetric) => {
     const { slope } = metric
     
-    // 1. 빨강 (Red): 기울기 3, 4
-    if (slope >= 3) {
+    // 1. 빨강 (Red): 기울기 양수
+    if (slope > 0) {
       return {
         className: 'h-4 px-1 text-[10px] bg-red-500 text-white hover:bg-red-600',
         variant: 'destructive' as const
       }
     }
     
-    // 2. 파랑 (Blue): 기울기 0, 1
-    if (slope <= 1) {
+    // 2. 파랑 (Blue): 기울기 음수
+    if (slope < 0) {
       return {
         className: 'h-4 px-1 text-[10px] bg-blue-500 text-white hover:bg-blue-600',
         variant: 'default' as const
       }
     }
     
-    // 3. 회색 (Gray): 기울기 2
+    // 3. 회색 (Gray): 횡보 (0)
     return {
       className: 'h-4 px-1 text-[10px] bg-gray-400 text-white hover:bg-gray-500',
       variant: 'secondary' as const
@@ -546,22 +546,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           <Badge 
                             {...(trend ? getTrendBadgeStyle(trend.ma20) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
                           >
-                            {trend ? `20 (${trend.ma20.slope},${trend.ma20.accel})` : '20'}
+                            {trend ? `20 (${trend.ma20.slope.toFixed(2)}%,${trend.ma20.accel.toFixed(2)}%)` : '20'}
                           </Badge>
                           <Badge 
                             {...(trend ? getTrendBadgeStyle(trend.ma50) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
                           >
-                            {trend ? `50 (${trend.ma50.slope},${trend.ma50.accel})` : '50'}
+                            {trend ? `50 (${trend.ma50.slope.toFixed(2)}%,${trend.ma50.accel.toFixed(2)}%)` : '50'}
                           </Badge>
                           <Badge 
                             {...(trend ? getTrendBadgeStyle(trend.ma100) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
                           >
-                            {trend ? `100 (${trend.ma100.slope},${trend.ma100.accel})` : '100'}
+                            {trend ? `100 (${trend.ma100.slope.toFixed(2)}%,${trend.ma100.accel.toFixed(2)}%)` : '100'}
                           </Badge>
                           <Badge 
                             {...(trend ? getTrendBadgeStyle(trend.ma200) : { className: 'h-4 px-1 text-[10px] bg-gray-400 text-white', variant: 'secondary' as const })}
                           >
-                            {trend ? `200 (${trend.ma200.slope},${trend.ma200.accel})` : '200'}
+                            {trend ? `200 (${trend.ma200.slope.toFixed(2)}%,${trend.ma200.accel.toFixed(2)}%)` : '200'}
                           </Badge>
                           {/* 종가 표시 */}
                           {bbData?.close && (
