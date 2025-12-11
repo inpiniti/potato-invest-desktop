@@ -25,6 +25,29 @@ interface PatchVersion {
 
 const versions: PatchVersion[] = [
   {
+    version: "0.0.39",
+    date: "2025-12-11",
+    title: "아키텍처 리팩토링 및 안정성 강화",
+    content: `
+### 🏗 초기화 로직 및 컴포넌트 리팩토링
+
+**주요 변경 사항:**
+- **App 초기화 로직 분리**: \`App.tsx\`에 산재되어 있던 7개의 \`useEffect\` 로직을 \`useAppInit\` 커스텀 훅으로 추출하여 코드 가독성과 유지보수성을 향상시켰습니다.
+- **MainContent 구조 개선**: 거대해진 \`MainContent\` 컴포넌트에서 트레이딩 카드 UI를 \`TradingCard\` 독립 컴포넌트로 분리했습니다.
+- **시장 미시구조 지표 추가**: 트레이딩 카드에 매수/매도 압력과 스프레드 상태를 시각적으로 보여주는 지표를 추가했습니다.
+
+### 🛡 에러 바운더리(Error Boundary) 적용
+
+- **앱 안정성 강화**: 렌더링 중 예기치 않은 오류가 발생해도 흰 화면(White Screen)이 아닌 친절한 에러 메시지와 복구 버튼을 제공하여 사용자 경험을 개선했습니다.
+- **상세 원인 파악**: 발생한 에러 로그를 UI에 표시하여 문제 원인을 쉽게 파악할 수 있도록 했습니다.
+
+**기술적 상세:**
+- \`src/hooks/useAppInit.ts\`: 초기화 로직 통합 훅
+- \`src/components/trading/TradingCard.tsx\`: 트레이딩 카드 컴포넌트 분리
+- \`src/components/error-boundary.tsx\`: 에러 바운더리 컴포넌트
+`
+  },
+  {
     version: "0.0.38",
     date: "2025-12-11",
     title: "일별/분봉 추세 로직 분리 및 시각화 개선",

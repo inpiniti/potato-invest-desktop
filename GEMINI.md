@@ -9,10 +9,105 @@
 > - ✅ **문서화**: README, 가이드 등 모든 문서는 한국어
 > - ✅ **사용자 메시지**: UI에 표시되는 모든 텍스트는 한국어
 > - ✅ **커뮤니케이션**: 개발자와의 모든 대화는 한국어
+> - ✅ **AI 답변**: 사용자의 질문에 대한 답변은 무조건 한국어로 작성 (기술적인 내용 포함)
 > 
 > **절대 영어로 작성하지 마세요!** 이는 프로젝트의 핵심 규칙입니다.
 
 ---
+
+# 프로젝트 구조 문서
+- 컴포넌트 : /src/components/GEMINI.md
+  ```
+  컴포넌트 룰 파일에 
+
+  컴포넌트 별로 정리좀 부탁해
+  input, output, 간단설명, 예제
+
+  이정도가 있으면 좋을듯
+
+  참고로 ui 폴더 하위에 있는것들은 외부라이브러리이니 정리할필요가 없음
+  ```
+- 훅 : /src/hooks/GEMINI.md
+  ```
+  훅(커스텀훅) 룰 문서도 생성했다.
+  내용을 작성해줘. 
+
+  훅명, 훅input, 훅설명, 훅예제
+  상태명, 상태설명,
+  함수명, 함수input. 함수output, 함수설명, 훅함수 예제
+  useEffect 등의 훅 가 있으면 같이 정리해줘
+  ```
+- 라이브러리 : /src/lib/GEMINI.md
+  ```
+  라이브러리 룰 문서에
+  라이브러리들을 정리해줘 (/src/lib)
+
+  라이브러리명, 설명
+  함수명, 함수설명, 사용예시
+  ```
+- 스토어 : /src/stores/GEMINI.md
+  ```
+  저장소 룰 문서에
+  저장소들을 정리해줘 (/src/store)
+
+  저장소명, 저장소 설명
+  변수명, 변수 설명
+  함수명, 함수 설명, input, output, 함수 예시
+  ```
+- 타입 : /src/types/GEMINI.md
+  ```
+  타입 룰 문서에
+  타입들을 정리해줘 (/src/types)
+
+  타입명, 타입설명
+  변수명, 변수 설명
+  ```
+- 레이아웃 : /src/GEMINI.md
+  ```
+  레이아웃 구조 설명
+  useEffect들 설명
+  ```
+- ipc : /electron/GEMINI.md
+  ```
+  ipc 룰 문서(/electron/GEMINI.md)에
+  ipc들을 정리해줘 (/electron)
+
+  ipc명, ipc설명, input, output, ipc예시
+  ```
+
+# 작업 완료 후 사용하는 프롬프트
+```
+작업한 내용 패치노트(patch-notes-dialog.tsx)에 정리해줘
+혹시나 추가 또는 변경된 컴포넌트, 훅, 라이브러리, 저장소, 타입, 레이아웃 등이 있으면
+룰 문서(GEMINI.md)에 정리해줘
+컴포넌트: /src/components/GEMINI.md
+훅: /src/hooks/GEMINI.md
+라이브러리: /src/lib/GEMINI.md
+저장소: /src/stores/GEMINI.md
+타입: /src/types/GEMINI.md
+레이아웃: /src/GEMINI.md
+ipc: /electron/GEMINI.md
+커밋메시지도 작성해줘
+```
+
+# 리팩토링 가능한 여부가 있는지 확인
+```
+정리된 룰 문서를 참조하여 리팩토링 가능한 부분이 있는지 확인해줘
+컴포넌트: /src/components/GEMINI.md
+훅: /src/hooks/GEMINI.md
+라이브러리: /src/lib/GEMINI.md
+저장소: /src/stores/GEMINI.md
+타입: /src/types/GEMINI.md
+레이아웃: /src/GEMINI.md
+```
+
+# 자동매매 프로세스
+```
+1. 실시간으로 소켓으로 가격변동 수신
+2. 가격변동이 일어난 종목의 분봉차트 조회 및 분봉 추세 분석
+3. 분석을 기반으로 매매 결정
+4. 트레이딩 기록
+```
 
 ## 📋 프로젝트 소개
 
