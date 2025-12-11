@@ -88,6 +88,7 @@ package.json에 버전 변경도 부탁해
 타입: /src/types/GEMINI.md
 레이아웃: /src/GEMINI.md
 ipc: /electron/GEMINI.md
+위 문서화 및 패치노트까지 작업이 완료되면,
 커밋메시지도 작성 및 커밋까지 진행해줘
 ```
 

@@ -143,7 +143,7 @@
   <RightPanel />
   ```
 
-### 11. TradingCard (`trading/TradingCard.tsx`)
+### 12. TradingCard (`trading/TradingCard.tsx`)
 - **Input (Props)**
   - `trading`: 트레이딩 정보 (티커, 거래소 등)
   - `realtimeData`: 실시간 시세 데이터
@@ -157,7 +157,12 @@
   - `handleRemoveClick`, `onAutoTrade`, `onSelectStock`
 - **설명**
   - 개별 종목의 트레이딩 상태를 보여주는 카드 컴포넌트입니다.
-  - 실시간 시세, 추세 정보, 시장 미시구조 지표(매수/매도 우위)를 표시하고 자동 매매 로직을 수행합니다.
+  - 내부 로직은 `useTradingCardLogic`으로 분리되었으며, `TradingHeader`, `TradingTrendBadges` 등의 하위 컴포넌트를 조합하여 구성됩니다.
+  - **Sub-Components**:
+    - `TradingHeader`: 티커, 이름, 가격 정보 및 볼린저 밴드 배지 표시
+    - `TradingTrendBadges`: 이동평균선 추세 상태 배지 표시 (Simple/Detailed 모드)
+    - `TradingMicroStructure`: 체결강도, 호가 잔량(OBI), 스프레드 정보 표시
+    - `TradingHistoryTable`: 매수/매도 이력 테이블 표시
 - **예제**
   ```tsx
   <TradingCard trading={tradingItem} realtimeData={data} ... />

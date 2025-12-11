@@ -172,15 +172,34 @@
   - `loading`, `error`
 
 - **Internal Logic**
-  - `calculateMADaily`, `calculateMAMinute`: 이동평균 계산
-  - `calculateTrendMetrics`: 기울기 및 가속도를 백분율(%)로 변환 후 합산하여 추세 강도 및 방향 계산
+  - `calculateMADaily`, `calculateMAMinute`: 이동평균 계산 (utils/trend-calculator.ts 로직 사용)
+  - `calculateTrendMetrics`: 기울기 및 가속도를 백분율(%)로 변환 후 합산하여 추세 강도 및 방향 계산 (utils/trend-calculator.ts 로직 사용)
 
 - **Effects (useEffect)**
   - 없음
 
 ---
 
-## 10. useTrendQueue (`useTrendQueue.ts`)
+## 10. useTradingCardLogic (`trading/hooks/useTradingCardLogic.ts`)
+
+- **훅 설명**: `TradingCard` 컴포넌트의 비즈니스 로직을 분리한 훅입니다. 자동 매매 판단, 추세 변화 감지, 시장 미시구조 분석 등을 수행합니다.
+- **Input (Arguments)**:
+  - `trading`: 트레이딩 아이템 정보
+  - `realtimeData`: 실시간 시세
+  - `trend`: 추세 데이터
+  - `onAutoTrade`: 자동 매매 콜백
+- **Output (Return Value)**:
+  - `dailyTrend`, `currentPrice`, `changeRate` 등 렌더링에 필요한 파생 데이터
+  - `supplyDemandStatus`, `spreadStatus` 등 분석 지표
+  - `autoTradeStatus`: 자동 매매 진행 상태
+- **Effects**:
+  - 실시간 데이터 수신 시 하이라이트 효과 처리
+  - 추세 변화 감지 (`prevTrend` 업데이트)
+  - 자동 매매 로직 실행 (매수/매도 신호 판단)
+
+---
+
+## 11. useTrendQueue (`useTrendQueue.ts`)
 
 - **훅 설명**: `useTrendHook`을 사용하여 추세 조회를 순차적으로 처리하는 큐(Queue) 시스템 훅입니다. API 과부하 방지를 위한 쓰로틀링(1분)과 딜레이가 적용되어 있습니다.
 - **Input (Arguments)**: 없음

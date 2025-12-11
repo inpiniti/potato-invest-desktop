@@ -25,6 +25,31 @@ interface PatchVersion {
 
 const versions: PatchVersion[] = [
   {
+    version: "0.0.41",
+    date: "2025-12-11",
+    title: "컴포넌트 리팩토링 및 코드 안정성 강화",
+    content: `
+### 🧹 TradingCard 컴포넌트 구조 개선
+
+**주요 변경 사항:**
+- **컴포넌트 분할**: 비대해진 \`TradingCard\` 컴포넌트를 기능별로 4개의 하위 컴포넌트로 분리하여 가독성과 유지보수성을 극대화했습니다.
+  - \`TradingHeader\`: 기본 정보 및 가격 표시
+  - \`TradingTrendBadges\`: 추세 분석 배지
+  - \`TradingMicroStructure\`: 수급 및 스프레드 지표
+  - \`TradingHistoryTable\`: 매매 이력 리스트
+- **로직 분리 (Custom Hook)**: 자동 매매, 상태 관리, 데이터 계산 로직을 \`useTradingCardLogic\` 훅으로 완전히 추출하여 UI와 로직의 관심사를 분리했습니다.
+
+### 📈 추세 분석 로직 모듈화
+
+- **유틸리티화**: \`useTrendHook\` 내부에 있던 이동평균 및 추세 강도 계산 로직을 \`src/utils/trend-calculator.ts\`로 분리했습니다.
+- **재사용성**: 순수 함수 형태로 분리되어 유닛 테스트가 용이해지고 다른 컴포넌트에서도 쉽게 재사용할 수 있습니다.
+
+**기술적 상세:**
+- \`src/components/trading/ui/\`: 하위 컴포넌트 폴더 구조화
+- \`src/utils/trend-calculator.ts\`: \`calculateTrendMetrics\`, \`calculateMADaily/Minute\` 이동
+`
+  },
+  {
     version: "0.0.40",
     date: "2025-12-11",
     title: "추세 분석 로직 개선 및 강도 시각화",
