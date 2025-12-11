@@ -25,6 +25,21 @@ interface PatchVersion {
 
 const versions: PatchVersion[] = [
   {
+    version: "0.0.42",
+    date: "2024-12-11",
+    title: "Storybook 통합 및 개발 환경 개선",
+    content: `
+- **Storybook 도입**
+  - UI 컴포넌트 독립 개발 및 테스트 환경 구축
+  - 주요 컴포넌트(TradingCard, Sidebar 등) 스토리 작성
+  - \`npm run storybook\` 명령어로 실행 가능
+  
+- **개발 환경 최적화**
+  - Vite 설정 수정: Storybook 실행 시 Electron 플러그인 충돌 방지
+  - ESM Alias 호환성 수정 (\`__dirname\` 제거)
+      `
+  },
+  {
     version: "0.0.41",
     date: "2025-12-11",
     title: "컴포넌트 리팩토링 및 코드 안정성 강화",
