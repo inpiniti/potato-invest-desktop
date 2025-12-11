@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useStockStore } from '@/stores/useStockStore'
 import { useTradingStore } from '@/stores/useTradingStore'
 import { useTradingViewStore } from '@/stores/useTradingViewStore'
+import { useUiStore } from '@/stores/useUiStore'
 import { toast } from 'sonner'
 import { TradingCard } from '@/components/trading/TradingCard'
 import { useTradingHook } from '@/hooks/useTradingHook'
@@ -14,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, ChevronDown, ChevronUp } from 'lucide-react'
+import { TrendingUp, X } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,7 @@ export function MainContent() {
     error: tradingError 
   } = useTradingHook()
   const { getInfo, getNews, getToss } = useStockHook()
+  const { isBottomPanelOpen, toggleBottomPanel } = useUiStore()
   
   // 볼린저 밴드 데이터 가져오기
   const { getBBData } = useTradingViewStore()
@@ -96,9 +98,6 @@ export function MainContent() {
     description: '',
     onConfirm: () => {},
   })
-
-  // 트레이딩 패널 축소 상태
-  const [collapsed, setCollapsed] = useState(false)
 
   // 이전 트레이딩 티커 목록 추적 (추세 조회 트리거용)
   const prevTickersRef = useRef<Set<string>>(new Set())
@@ -516,55 +515,64 @@ export function MainContent() {
       </div>
 
       {/* 하단: 트레이딩 패널 */}
-      <div 
-        className="overflow-hidden bg-muted/20"
-        style={{ 
-          height: collapsed ? 'auto' : '720px',
-          flexShrink: 0
-        }}
-      >
-        <div className="h-full">
-          <div className="flex items-center justify-between p-2 border-b">
-            <h3 className="text-sm font-semibold">트레이딩 종목</h3>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setCollapsed(!collapsed)}
-              className="h-6 w-6 p-0"
-            >
-              {collapsed ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </div>
-          {!collapsed && (
-            <>
-              {tradings.length === 0 ? (
-                <div className="flex items-center justify-center h-60 text-sm text-muted-foreground">
-                  트레이딩 종목이 없습니다
-                </div>
-              ) : (
-                <ScrollArea className="h-[calc(100%-2rem)]">
-                  {/* 2열 Grid 레이아웃 */}
-                  <div className="grid grid-cols-2 gap-2 p-2">
-                    {tradings.map((trading) => (
-                      <TradingCard 
-                        key={trading.ticker}
-                        trading={trading}
-                        realtimeData={getRealtimeData(trading.ticker)}
-                        trend={trendMap.get(trading.ticker) || null}
-                        trendLoading={trendLoadingMap.get(trading.ticker) || false}
-                        bbData={getBBData(trading.ticker)}
-                        handleRemoveClick={handleRemoveClick}
-                        onAutoTrade={onAutoTrade}
-                        onSelectStock={handleSelectStock}
-                      />
-                    ))}
+      {isBottomPanelOpen && (
+        <div 
+          className="overflow-hidden bg-muted/20 border-t"
+          style={{ 
+            height: '450px',
+            flexShrink: 0
+          }}
+        >
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between p-2 border-b bg-muted/40 px-4">
+              <h3 className="text-xs font-semibold flex items-center gap-2">
+                <TrendingUp className="h-3 w-3" />
+                트레이딩 패널
+              </h3>
+              <div className="flex items-center gap-1">
+                 <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={toggleBottomPanel}
+                  className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                  title="패널 닫기"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-hidden">
+                {tradings.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground flex-col gap-2">
+                    <p>트레이딩 중인 종목이 없습니다</p>
+                    <Button variant="outline" size="sm" onClick={handleTradingToggle}>
+                      현재 종목 추가하기
+                    </Button>
                   </div>
-                </ScrollArea>
-              )}
-            </>
-          )}
+                ) : (
+                  <ScrollArea className="h-full">
+                    <div className="grid grid-cols-2 gap-2 p-2">
+                      {tradings.map((trading) => (
+                        <TradingCard 
+                          key={trading.ticker}
+                          trading={trading}
+                          realtimeData={getRealtimeData(trading.ticker)}
+                          trend={trendMap.get(trading.ticker) || null}
+                          trendLoading={trendLoadingMap.get(trading.ticker) || false}
+                          bbData={getBBData(trading.ticker)}
+                          handleRemoveClick={handleRemoveClick}
+                          onAutoTrade={onAutoTrade}
+                          onSelectStock={handleSelectStock}
+                        />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 확인 Dialog */}
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>

@@ -8,6 +8,9 @@ declare global {
       send: (channel: string, ...args: any[]) => void
       invoke: (channel: string, ...args: any[]) => Promise<any>
       openExternal: (url: string) => Promise<void>
+      windowMinimize: () => Promise<void>
+      windowMaximize: () => Promise<void>
+      windowClose: () => Promise<void>
       oauthLogin: (loginUrl: string) => Promise<{ accessToken: string; refreshToken: string }>
       koreaInvestAuth: (credentials: { appkey: string; appsecret: string }) => Promise<{
         accessToken: string

@@ -5,16 +5,31 @@
 `App.tsx`는 애플리케이션의 최상위 컴포넌트로서 전체적인 레이아웃 구조를 정의하고 전역 상태 초기화를 담당합니다.
 
 ### 전체 구조 (Flex Layout)
-화면은 `flex h-screen w-full` 컨테이너 내에서 3단 분할 구조를 가집니다.
+화면은 `flex h-screen w-full flex-col` 컨테이너 내에서 상단 타이틀바와 하단 컨텐츠 영역으로 나뉩니다.
+
+#### 1. 상단: 타이틀바 (`<TitleBar />`)
+- **높이**: `32px` (`h-8`)
+- **역할**:
+  - 앱 로고 및 프로젝트명 표시
+  - 사이드바, 하단 패널, 우측 패널 토글 버튼
+  - 윈도우 컨트롤 (최소화, 최대화, 닫기)
+  - 윈도우 드래그 영역 제공
+
+#### 2. 하단: 메인 영역 (Main Area)
+`flex flex-1 overflow-hidden` 컨테이너 내에서 3단 분할 구조를 가집니다.
+
 1.  **좌측: AppSidebar (`<AppSidebar />`)**:
     -   너비: `350px` (CSS 변수 `--sidebar-width`로 제어)
+    -   **위치**: 타이틀바(`32px`) 아래에 위치 (`top: 32px`, `height: calc(100svh - 32px)`)
     -   역할: 네비게이션, 계좌 선택, 보유 종목/S&P 500 리스트 표시
 2.  **중앙: MainContent (`<MainContent />`)**:
     -   너비: `flex-1` (남은 공간 모두 차지)
     -   역할: 차트, 트레이딩 카드 리스트(매매 패널), 종목 상세 정보 등 핵심 기능 영역
+    -   **하단 패널 제어**: `useUiStore`의 `isBottomPanelOpen` 상태에 따라 하단 트레이딩 패널 렌더링 여부 결정
 3.  **우측: RightPanel (`<RightPanel />`)**:
     -   너비: `w-80` (320px 고정)
     -   역할: 선택된 종목의 뉴스 및 커뮤니티(토스) 반응 표시
+    -   **제어**: `useUiStore`의 `isRightPanelOpen` 상태에 따라 조건부 렌더링 (`{isRightPanelOpen && <aside>...}`)
 
 ### Provider 및 Overlay
 -   **SidebarProvider**: shadcn/ui 사이드바 상태 관리를 위한 컨텍스트 제공

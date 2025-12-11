@@ -19,11 +19,39 @@ interface PatchNotesDialogProps {
 interface PatchVersion {
   version: string
   date: string
-  title: string
-  content: string
+  title?: string
+  content?: string
+  changes?: string[]
+}
+
+interface PatchNotesDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 const versions: PatchVersion[] = [
+  {
+    version: '0.0.44',
+    date: '2025-12-11',
+    title: '사이드바 레이아웃 겹침 문제 해결',
+    changes: [
+      '🐛 사이드바 상단이 타이틀바에 가려지는 UI 버그 수정',
+      '📐 AppSidebar 컴포넌트에 고정 위치(top: 32px) 및 높이 스타일 적용',
+      '🔧 전체 레이아웃 구조에서 타이틀바와 사이드바의 Z-index 관계 명확화',
+    ],
+  },
+  {
+    version: '0.0.43',
+    date: '2025-12-11',
+    title: '커스텀 타이틀바 및 레이아웃 구조 개선',
+    changes: [
+      '✨ 커스텀 윈도우 타이틀바 추가 (VS Code 스타일)',
+      '🪟 윈도우 제목표시줄 제거 및 최소화/최대화/닫기 버튼 커스텀 구현',
+      '🛠️ 상단바에 사이드바, 하단 패널, 우측 패널 토글 버튼 추가',
+      '📐 전체 레이아웃 구조 개선 (상단 타이틀바 + 하단 컨텐츠 영역)',
+      '🔧 하단 트레이딩 패널 닫기/열기 기능 개선',
+    ],
+  },
   {
     version: "0.0.42",
     date: "2024-12-11",
@@ -899,9 +927,17 @@ export function PatchNotesDialog({ open, onOpenChange }: PatchNotesDialogProps) 
             </div>
             <ScrollArea className="flex-1 p-6">
               <div className="prose dark:prose-invert prose-sm max-w-none pb-10">
-                <Streamdown>
-                  {currentVersionData.content}
-                </Streamdown>
+                {currentVersionData.content ? (
+                  <Streamdown>
+                    {currentVersionData.content}
+                  </Streamdown>
+                ) : (
+                  <ul className="list-disc pl-5 space-y-2">
+                    {currentVersionData.changes?.map((change, i) => (
+                      <li key={i} className="text-foreground">{change}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </ScrollArea>
           </div>

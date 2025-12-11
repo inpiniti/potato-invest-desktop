@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
         return ipcRenderer.invoke(channel, ...omit)
     },
     openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+    windowMinimize: () => ipcRenderer.invoke('window-minimize'),
+    windowMaximize: () => ipcRenderer.invoke('window-maximize'),
+    windowClose: () => ipcRenderer.invoke('window-close'),
     oauthLogin: (loginUrl: string) => ipcRenderer.invoke('oauth-login', loginUrl),
     koreaInvestAuth: (credentials: { appkey: string; appsecret: string }) => 
         ipcRenderer.invoke('korea-invest-auth', credentials),

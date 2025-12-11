@@ -173,3 +173,19 @@
 - `addTrend(trend)`: 새로운 추세 데이터를 리스트에 추가합니다.
 - `clearTrends()`: 모든 추세 데이터를 삭제합니다.
 - `getTrendByTicker(ticker)`: 특정 종목의 추세 데이터를 찾아 반환합니다.
+
+---
+
+## 11. useUiStore (`useUiStore.ts`)
+
+- **저장소 설명**: 사이드바, 하단 패널, 우측 패널 등 주요 UI 컴포넌트의 토글 상태를 관리합니다. `localStorage`에 지속됩니다.
+
+### State (Variables)
+- `isBottomPanelOpen`: 하단 트레이딩 패널 표시 여부 (`boolean`)
+- `isRightPanelOpen`: 우측 정보 패널 표시 여부 (`boolean`)
+
+### Actions (Functions)
+- `toggleBottomPanel()`: 하단 패널 열림/닫힘 상태를 반전시킵니다.
+- `toggleRightPanel()`: 우측 패널 열림/닫힘 상태를 반전시킵니다.
+- `setBottomPanelOpen(open)`: 하단 패널 상태를 직접 설정합니다.
+- `setRightPanelOpen(open)`: 우측 패널 상태를 직접 설정합니다.

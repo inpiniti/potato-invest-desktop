@@ -20,12 +20,13 @@ function createWindow() {
     win = new BrowserWindow({
         title: 'Potato Invest Desktop',
         icon: path.join(process.env.VITE_PUBLIC || '', 'electron-vite.svg'),
-        autoHideMenuBar: true, // 메뉴바 숨김
+        frame: false, // 기본 프레임(타이틀바 포함) 제거
+        autoHideMenuBar: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: false, // Preload 스크립트가 작동하도록 설정
+            sandbox: false,
         },
     })
 
@@ -101,6 +102,21 @@ if (!gotTheLock) {
     // 외부 링크 열기 핸들러
     ipcMain.handle('open-external', async (_, url) => {
         await shell.openExternal(url)
+    })
+
+    // 윈도우 제어 핸들러
+    ipcMain.handle('window-minimize', () => {
+        win?.minimize()
+    })
+    ipcMain.handle('window-maximize', () => {
+        if (win?.isMaximized()) {
+            win.unmaximize()
+        } else {
+            win?.maximize()
+        }
+    })
+    ipcMain.handle('window-close', () => {
+        win?.close()
     })
 
     // OAuth 로그인 핸들러

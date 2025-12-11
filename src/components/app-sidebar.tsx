@@ -329,6 +329,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar
       collapsible="icon"
       className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row"
+      style={{ top: '32px', height: 'calc(100svh - 32px)' } as React.CSSProperties}
       {...props}
     >
       {/* This is the first sidebar */}

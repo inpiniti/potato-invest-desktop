@@ -181,3 +181,17 @@
   ```tsx
   <TrendAnalysisDialog open={isOpen} onOpenChange={setIsOpen} />
   ```
+
+### 13. TitleBar (`layout/title-bar.tsx`)
+- **Input (Props)**
+  - 없음
+- **Output (Events)**
+  - 없음 (내부적으로 `ipcRenderer` 및 `useUiStore` 사용)
+- **설명**
+  - 커스텀 윈도우 타이틀바입니다.
+  - 좌측에 로고 및 앱 이름, 우측에 패널 토글 버튼과 윈도우 제어(최소화, 최대화, 닫기) 버튼을 포함합니다.
+  - Electron의 `frame: false` 설정과 함께 사용되며, 드래그 영역(`app-region-drag`)이 설정되어 있습니다.
+- **예제**
+  ```tsx
+  <TitleBar />
+  ```
