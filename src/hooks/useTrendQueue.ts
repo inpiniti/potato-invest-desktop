@@ -63,7 +63,17 @@ export function useTrendQueue() {
 
       try {
         console.log(`📊 추세 조회 시작: ${ticker}`)
-        const trend = await getTrendMinutes({ ticker, exchange })
+        
+        // 타임아웃 설정 (30초)
+        const TIMEOUT = 30 * 1000
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Trend fetch timeout')), TIMEOUT)
+        )
+        
+        const trend = await Promise.race([
+          getTrendMinutes({ ticker, exchange }),
+          timeoutPromise
+        ]) as Awaited<ReturnType<typeof getTrendMinutes>>
         
         // 응답 완료 시간 저장 (요청 시간이 아닌 응답 시간!)
         lastFetchTimeRef.current.set(cacheKey, Date.now())
@@ -75,7 +85,7 @@ export function useTrendQueue() {
         resolve(trend)
       } catch (err) {
         console.error(`❌ 추세 조회 실패: ${ticker}`, err)
-        // 실패해도 캐시된 데이터 반환
+        // 실패해도 캐시된 데이터 반환 (Promise가 pending 상태로 남지 않도록!)
         const cached = trendCacheRef.current.get(cacheKey) || null
         resolve(cached)
       } finally {

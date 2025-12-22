@@ -98,6 +98,7 @@
 
 - **WebSocketManager (Internal Class)**
   - 전역 유일 인스턴스로 웹소켓 연결 관리, 자동 재연결, 리스너 관리 수행
+  - **v0.0.45**: 리스너 중복 등록 방지 및 등록/해제 시 로그 출력 기능 추가
 
 ---
 
@@ -194,8 +195,8 @@
   - `autoTradeStatus`: 자동 매매 진행 상태
 - **Effects**:
   - 실시간 데이터 수신 시 하이라이트 효과 처리
-  - 추세 변화 감지 (`prevTrend` 업데이트)
-  - 자동 매매 로직 실행 (매수/매도 신호 판단)
+  - 추세 변화 감지 (`prevTrend` 업데이트) - **v0.0.45**: 의존성 배열에 `prevTrend`, `hasTrendChanged` 추가
+  - 자동 매매 로직 실행 (매수/매도 신호 판단) - **v0.0.45**: `onAutoTradeRef` 사용으로 stale closure 방지, 완전한 의존성 명시
 
 ---
 
@@ -216,3 +217,7 @@
 
 - **Effects (useEffect)**
   - 없음 (`processQueue` 함수 내에서 비동기 루프 처리)
+
+- **v0.0.45 변경사항**:
+  - API 호출 시 30초 타임아웃 설정 추가 (`Promise.race` 활용)
+  - 타임아웃 발생 시에도 캐시된 데이터 반환하여 Promise 미해결 상태 방지

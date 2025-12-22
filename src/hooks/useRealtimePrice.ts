@@ -52,8 +52,19 @@ class WebSocketManager {
 
   // 리스너 등록
   addListener(callback: (data: ParsedPriceData) => void) {
+    // 중복 등록 방지 (이미 같은 참조의 콜백이 있으면 추가하지 않음)
+    if (this.listeners.has(callback)) {
+      console.log("[WS] Listener already registered, skip");
+      return () => {};
+    }
+    
     this.listeners.add(callback);
-    return () => this.listeners.delete(callback);
+    console.log(`[WS] Listener added, total: ${this.listeners.size}`);
+    
+    return () => {
+      this.listeners.delete(callback);
+      console.log(`[WS] Listener removed, remaining: ${this.listeners.size}`);
+    };
   }
 
   // 데이터를 모든 리스너에게 전달

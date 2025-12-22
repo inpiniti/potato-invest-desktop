@@ -31,6 +31,19 @@ interface PatchNotesDialogProps {
 
 const versions: PatchVersion[] = [
   {
+    version: '0.0.45',
+    date: '2025-12-22',
+    title: '자동매매 프로세스 안정성 개선 및 메모리 누수 수정',
+    changes: [
+      '🐛 [심각] main-content.tsx: 실시간 데이터 수신 시 무한 트리거되던 useEffect 수정 → 인터벌 기반 추세 조회로 변경',
+      '🐛 useTradingCardLogic.ts: 추세 변화 감지 useEffect에 누락된 의존성(prevTrend, hasTrendChanged) 추가',
+      '🐛 useTradingCardLogic.ts: 자동 트레이딩 useEffect에 stale closure 방지를 위한 useRef 적용',
+      '🛡️ useRealtimePrice.ts: WebSocketManager 리스너 중복 등록 방지 및 로그 추가',
+      '⏱️ useTrendQueue.ts: API 타임아웃(30초) 설정 추가로 Promise 미해결 상태 방지',
+      '📝 컴포넌트 언마운트 시 모든 인터벌 타이머 정리 로직 추가',
+    ],
+  },
+  {
     version: '0.0.44',
     date: '2025-12-11',
     title: '사이드바 레이아웃 겹침 문제 해결',

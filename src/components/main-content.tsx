@@ -88,8 +88,8 @@ export function MainContent() {
   const [trendMap, setTrendMap] = useState<Map<string, Trend | null>>(new Map())
   const [trendLoadingMap, setTrendLoadingMap] = useState<Map<string, boolean>>(new Map())
   
-  // 종목별 마지막 수신 시간 (추세 조회 트리거용)
-  const lastDataTimeRef = useRef<Map<string, number>>(new Map())
+  // 종목별 추세 조회 인터벌 타이머
+  const trendIntervalRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map())
 
   // Dialog 상태 관리
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -147,25 +147,57 @@ export function MainContent() {
   }, [requestTrend])
 
   /**
-   * 실시간 데이터 수신 시 추세 조회 트리거 (1분 간격)
+   * 종목별 추세 조회 인터벌 관리
+   * - 트레이딩 목록 변경 시 인터벌 설정/해제
+   * - 1분마다 각 종목의 추세 조회
    */
   useEffect(() => {
     const ONE_MINUTE = 60 * 1000
-    const now = Date.now()
-
+    const currentTickers = new Set(tradings.map(t => `${t.ticker}_${t.exchange}`))
+    
+    // 새로 추가된 종목에 대해 인터벌 설정
     tradings.forEach((trading) => {
-      const realtimeData = getRealtimeData(trading.ticker)
-      if (!realtimeData) return
-
-      const lastTime = lastDataTimeRef.current.get(trading.ticker) || 0
+      const key = `${trading.ticker}_${trading.exchange}`
       
-      // 1분이 지났으면 추세 조회
-      if (now - lastTime >= ONE_MINUTE) {
-        lastDataTimeRef.current.set(trading.ticker, now)
+      // 이미 인터벌이 있으면 스킵
+      if (trendIntervalRef.current.has(key)) return
+      
+      // 인터벌 설정 (1분마다 추세 조회)
+      const timer = setInterval(() => {
+        console.log(`⏰ [인터벌] ${trading.ticker} 추세 조회`)
         fetchTrendForTicker(trading.ticker, trading.exchange)
+      }, ONE_MINUTE)
+      
+      trendIntervalRef.current.set(key, timer)
+      console.log(`📊 [인터벌 설정] ${trading.ticker} - 1분 간격 추세 조회 시작`)
+    })
+    
+    // 제거된 종목의 인터벌 정리
+    trendIntervalRef.current.forEach((timer, key) => {
+      if (!currentTickers.has(key)) {
+        clearInterval(timer)
+        trendIntervalRef.current.delete(key)
+        console.log(`🗑️ [인터벌 해제] ${key}`)
       }
     })
-  }, [tradings.map(t => getRealtimeData(t.ticker)?.KHMS).join(',')])
+    
+    // 클린업
+    return () => {
+      // 컴포넌트 언마운트 시에만 전체 정리
+      // (의존성 변경으로 인한 재실행 시에는 위에서 개별 관리)
+    }
+  }, [tradings, fetchTrendForTicker])
+  
+  // 컴포넌트 언마운트 시 모든 인터벌 정리
+  useEffect(() => {
+    return () => {
+      trendIntervalRef.current.forEach((timer) => {
+        clearInterval(timer)
+      })
+      trendIntervalRef.current.clear()
+      console.log('🧹 [클린업] 모든 추세 조회 인터벌 정리')
+    }
+  }, [])
 
   if (!ticker) {
     return (

@@ -1,5 +1,5 @@
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import type { Trend } from '@/types/trend'
 import type { TradingListItem } from '@/types/trading'
 import type { RealtimePrice } from '@/types/realtime'
@@ -122,18 +122,24 @@ export const useTradingCardLogic = ({
   }, [realtimeData?.KHMS]) // 한국시간이 변경될 때마다 (새 데이터 수신)
 
   // 추세 변화 감지 (MA20 가속도 기준)
-  const hasTrendChanged = (prev: Trend | null, curr: Trend): boolean => {
+  const hasTrendChanged = useCallback((prev: Trend | null, curr: Trend): boolean => {
     if (!prev) return true // 첫 번째 추세는 변화로 간주
     // 가속도나 기울기가 변했는지 체크
     return prev.ma20.accel !== curr.ma20.accel || prev.ma20.slope !== curr.ma20.slope
-  }
+  }, [])
 
   // 추세 변화 시 이전 추세 저장
   useEffect(() => {
     if (trend && hasTrendChanged(prevTrend, trend)) {
       setPrevTrend(trend)
     }
-  }, [trend])
+  }, [trend, prevTrend, hasTrendChanged])
+
+  // 콜백 함수 참조 보관 (stale closure 방지)
+  const onAutoTradeRef = useRef(onAutoTrade)
+  useEffect(() => {
+    onAutoTradeRef.current = onAutoTrade
+  }, [onAutoTrade])
 
   // 자동 트레이딩 로직
   useEffect(() => {
@@ -167,13 +173,14 @@ export const useTradingCardLogic = ({
     // MA20 기준 신호 확인 (분봉)
     const ma20Slope = trend.ma20.slope  // 0 ~ 9
     const ma20Accel = trend.ma20.accel  // 0 ~ 8
+    const tickerName = trading.ticker
 
     // 매도 로직
     if (openPositions.length > 0 && isSellSignal(ma20Slope, ma20Accel)) {
       // 🔒 매도
       setAutoTradeStatus('selling')
-      console.log(`🤖 [자동매도] ${trading.ticker} - 매도 신호 발생 (Slope:${ma20Slope.toFixed(2)}%, Accel:${ma20Accel.toFixed(2)}%)`)
-      onAutoTrade(trading.ticker, currentPrice, 'sell')
+      console.log(`🤖 [자동매도] ${tickerName} - 매도 신호 발생 (Slope:${ma20Slope.toFixed(2)}%, Accel:${ma20Accel.toFixed(2)}%)`)
+      onAutoTradeRef.current(tickerName, currentPrice, 'sell')
       setLastAutoTradeTime(now)
       setTimeout(() => setAutoTradeStatus('idle'), 5000)
       return
@@ -189,18 +196,18 @@ export const useTradingCardLogic = ({
         const lastBuyPrice = sortedPositions[0].buyPrice
         
         if (currentPrice >= lastBuyPrice) {
-          console.log(`⏸️ [매수 보류] ${trading.ticker} - 매수 신호지만 가격이 높음 (현재가: $${currentPrice.toFixed(2)} >= 이전매수가: $${lastBuyPrice.toFixed(2)})`)
+          console.log(`⏸️ [매수 보류] ${tickerName} - 매수 신호지만 가격이 높음 (현재가: $${currentPrice.toFixed(2)} >= 이전매수가: $${lastBuyPrice.toFixed(2)})`)
           return
         }
       }
       
-      console.log(`🤖 [자동매수] ${trading.ticker} - 매수 신호 발생 (Slope:${ma20Slope.toFixed(2)}%, Accel:${ma20Accel.toFixed(2)}%)`)
+      console.log(`🤖 [자동매수] ${tickerName} - 매수 신호 발생 (Slope:${ma20Slope.toFixed(2)}%, Accel:${ma20Accel.toFixed(2)}%)`)
       setAutoTradeStatus('buying')
-      onAutoTrade(trading.ticker, currentPrice, 'buy')
+      onAutoTradeRef.current(tickerName, currentPrice, 'buy')
       setLastAutoTradeTime(now)
       setTimeout(() => setAutoTradeStatus('idle'), 5000)
     }
-  }, [trend, prevTrend, currentPrice, openPositions.length])
+  }, [trend, prevTrend, currentPrice, openPositions.length, autoTradeStatus, lastAutoTradeTime, trading.ticker, openPositions])
 
   return {
     dailyTrend,
